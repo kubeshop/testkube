@@ -13,7 +13,8 @@
 //   - step.<id>.status, the status of an earlier step
 //   - step.<id>.exitCode, the exit code of an earlier step
 //   - step.<id>.agent.<key>, a value of the turn of an earlier agent step: session, the session of
-//     the AI Agent, and name, the name of the AI Agent
+//     the AI Agent; name, the name of the AI Agent; and responseFile, the path of the file with
+//     its answer, which has a value only when the turn gave an answer
 //
 // The <id> is the stable id of the step, and not the reference that Testkube generates for the execution.
 //

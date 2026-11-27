@@ -137,6 +137,7 @@ func TestStepMachine_Outputs(t *testing.T) {
 func TestStepMachine_Agent(t *testing.T) {
 	tests := map[string]struct {
 		file    string // content of the file of the turn; empty means no file
+		answer  bool   // whether the step has a file with the answer
 		expr    string
 		wantVal string
 		wantOk  bool
@@ -152,6 +153,18 @@ func TestStepMachine_Agent(t *testing.T) {
 			expr:    "step.gate.agent.name",
 			wantVal: "Release Gate",
 			wantOk:  true,
+		},
+		"resolves the path of the file with the answer": {
+			file:    `{"session":"session-1"}`,
+			answer:  true,
+			expr:    "step.gate.agent.responseFile",
+			wantVal: "<results>/gate/response.md",
+			wantOk:  true,
+		},
+		"returns no path for a turn that gave no answer": {
+			file:   `{"session":"session-1"}`,
+			expr:   "step.gate.agent.responseFile",
+			wantOk: false,
 		},
 		"returns nothing for a key that the turn does not have": {
 			file:   `{"session":"session-1"}`,
@@ -186,10 +199,13 @@ func TestStepMachine_Agent(t *testing.T) {
 					require.NoError(t, os.WriteFile(filepath.Join(dir, StepAgentFile), []byte(tc.file), 0o644))
 				}
 			}
+			if tc.answer {
+				require.NoError(t, os.WriteFile(filepath.Join(StepResultsDir("gate"), StepAgentResponseName), []byte("go"), 0o644))
+			}
 			val, ok := resolveStepExpr(t, tc.expr)
 			assert.Equal(t, tc.wantOk, ok)
 			if tc.wantOk {
-				assert.Equal(t, tc.wantVal, val)
+				assert.Equal(t, strings.ReplaceAll(tc.wantVal, "<results>", GetStepResultsBase()), val)
 			}
 		})
 	}

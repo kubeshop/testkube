@@ -38,8 +38,8 @@
 //     writes it. With that byte the text can start an instruction for the init process.
 //   - The answer is the file response.md in the results directory of the step, and it is not a
 //     step output. The init process skips an output file above data.MaxOutputSize, and an
-//     answer has no size limit. A later step reads the answer at step.<id>.results/response.md,
-//     so the author sets the id or the name of the step to know that path.
+//     answer has no size limit. A later step reads the path of the file at
+//     step.<id>.agent.responseFile, so the author sets the id or the name of the step.
 //   - agent_outputs.go gives the outputs that the step declares under `outputs`. Each one has
 //     the schema of a config parameter. The command adds a contract to the prompt: the answer
 //     ends with a fenced block with the language testkube-outputs that holds one JSON object.

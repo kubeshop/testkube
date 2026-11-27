@@ -53,7 +53,8 @@ const (
 
 // agentResponseFile is the file in the step results directory that holds the answer. The
 // answer is not a step output, because a step output has a size limit and an answer has none.
-const agentResponseFile = "response.md"
+// A later step gets its path from step.<id>.agent.responseFile.
+const agentResponseFile = data.StepAgentResponseName
 
 // instructionStart is the first byte of an instruction for the init process and for the Runner.
 const instructionStart = "\x01"
