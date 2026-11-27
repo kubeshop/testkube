@@ -1,7 +1,6 @@
 package convert
 
 import (
-	"fmt"
 	"io"
 	"strconv"
 
@@ -11,9 +10,8 @@ import (
 )
 
 // The seven target tables, and the exact column order each serializer below
-// writes. These lists and the corresponding writeXxxRow functions must be kept
-// in step; the integration test asserts the result round-trips through the
-// repository layer, which is what catches a mismatch.
+// writes. Each writeXxxRow function names the column of each value, and
+// writeCopyRow refuses a row whose names differ from the list here.
 //
 // organization_id and environment_id are deliberately absent: OSS never sets
 // them (pkg/repository/postgres_factory.go builds the repository without
@@ -118,35 +116,34 @@ func writeExecutionRow(w io.Writer, exec *testkube.TestWorkflowExecution) error 
 	if exec.Lineage != nil {
 		lineageBaseID = escapeCopyValue(exec.Lineage.BaseId)
 		lineageRootID = escapeCopyValue(exec.Lineage.RootId)
-		lineageAttempt = strconv.FormatInt(int64(exec.Lineage.Attempt), 10)
+		lineageAttempt = formatInt(exec.Lineage.Attempt)
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%t\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-		escapeCopyValue(exec.Id),
-		escapeCopyValue(exec.GroupId),
-		escapeCopyValue(exec.RunnerId),
-		escapeJSONB(runnerTarget),
-		escapeJSONB(runnerOriginalTarget),
-		escapeCopyValue(exec.Name),
-		escapeCopyValue(exec.Namespace),
-		exec.Number,
-		formatTimestamp(exec.ScheduledAt),
-		formatTimestamp(exec.AssignedAt),
-		formatTimestamp(exec.StatusAt),
-		escapeCopyValue(exec.TestWorkflowExecutionName),
-		exec.DisableWebhooks,
-		escapeJSONB(tags),
-		escapeJSONB(runningContext),
-		escapeJSONB(configParams),
-		escapeJSONB(runtime),
-		escapeJSONB(silentMode),
-		workflowName,
-		status,
-		lineageBaseID,
-		lineageRootID,
-		lineageAttempt,
-	)
-	return err
+	return writeCopyRow(w, executionColumns, []copyField{
+		{"id", escapeCopyValue(exec.Id)},
+		{"group_id", escapeCopyValue(exec.GroupId)},
+		{"runner_id", escapeCopyValue(exec.RunnerId)},
+		{"runner_target", escapeJSONB(runnerTarget)},
+		{"runner_original_target", escapeJSONB(runnerOriginalTarget)},
+		{"name", escapeCopyValue(exec.Name)},
+		{"namespace", escapeCopyValue(exec.Namespace)},
+		{"number", formatInt(exec.Number)},
+		{"scheduled_at", formatTimestamp(exec.ScheduledAt)},
+		{"assigned_at", formatTimestamp(exec.AssignedAt)},
+		{"status_at", formatTimestamp(exec.StatusAt)},
+		{"test_workflow_execution_name", escapeCopyValue(exec.TestWorkflowExecutionName)},
+		{"disable_webhooks", strconv.FormatBool(exec.DisableWebhooks)},
+		{"tags", escapeJSONB(tags)},
+		{"running_context", escapeJSONB(runningContext)},
+		{"config_params", escapeJSONB(configParams)},
+		{"runtime", escapeJSONB(runtime)},
+		{"silent_mode", escapeJSONB(silentMode)},
+		{"workflow_name", workflowName},
+		{"status", status},
+		{"lineage_base_id", lineageBaseID},
+		{"lineage_root_id", lineageRootID},
+		{"lineage_attempt", lineageAttempt},
+	})
 }
 
 // writeSignatureRows flattens the signature tree in pre-order.
@@ -171,18 +168,18 @@ func writeSignatureRows(w io.Writer, executionID string, signatures []testkube.T
 
 		id := uuid.NewString()
 
-		_, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%t\t%t\t%s\t%d\t%s\n",
-			escapeCopyValue(executionID),
-			escapeCopyValue(sig.Ref),
-			escapeCopyValue(sig.Id),
-			escapeCopyValue(sig.Name),
-			escapeCopyValue(sig.Category),
-			sig.Optional,
-			sig.Negative,
-			parent,
-			*order,
-			id,
-		)
+		err := writeCopyRow(w, signatureColumns, []copyField{
+			{"execution_id", escapeCopyValue(executionID)},
+			{"ref", escapeCopyValue(sig.Ref)},
+			{"step_id", escapeCopyValue(sig.Id)},
+			{"name", escapeCopyValue(sig.Name)},
+			{"category", escapeCopyValue(sig.Category)},
+			{"optional", strconv.FormatBool(sig.Optional)},
+			{"negative", strconv.FormatBool(sig.Negative)},
+			{"parent_id", parent},
+			{"sig_order", formatInt(*order)},
+			{"id", id},
+		})
 		if err != nil {
 			return err
 		}
@@ -225,24 +222,23 @@ func writeResultRow(w io.Writer, executionID string, result *testkube.TestWorkfl
 		predictedStatus = escapeCopyValue(string(*result.PredictedStatus))
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%s\t%s\t%s\t%s\n",
-		escapeCopyValue(executionID),
-		status,
-		predictedStatus,
-		formatTimestamp(result.QueuedAt),
-		formatTimestamp(result.StartedAt),
-		formatTimestamp(result.FinishedAt),
-		escapeCopyValue(result.Duration),
-		escapeCopyValue(result.TotalDuration),
-		result.DurationMs,
-		result.PausedMs,
-		result.TotalDurationMs,
-		escapeJSONB(pauses),
-		escapeJSONB(initialization),
-		escapeJSONB(steps),
-		escapeJSONB(statusDetails),
-	)
-	return err
+	return writeCopyRow(w, resultColumns, []copyField{
+		{"execution_id", escapeCopyValue(executionID)},
+		{"status", status},
+		{"predicted_status", predictedStatus},
+		{"queued_at", formatTimestamp(result.QueuedAt)},
+		{"started_at", formatTimestamp(result.StartedAt)},
+		{"finished_at", formatTimestamp(result.FinishedAt)},
+		{"duration", escapeCopyValue(result.Duration)},
+		{"total_duration", escapeCopyValue(result.TotalDuration)},
+		{"duration_ms", formatInt(result.DurationMs)},
+		{"paused_ms", formatInt(result.PausedMs)},
+		{"total_duration_ms", formatInt(result.TotalDurationMs)},
+		{"pauses", escapeJSONB(pauses)},
+		{"initialization", escapeJSONB(initialization)},
+		{"steps", escapeJSONB(steps)},
+		{"status_details", escapeJSONB(statusDetails)},
+	})
 }
 
 // writeOutputRow writes one output reference. order is 1-based to match how the
@@ -253,14 +249,13 @@ func writeOutputRow(w io.Writer, executionID string, output *testkube.TestWorkfl
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\n",
-		escapeCopyValue(executionID),
-		escapeCopyValue(output.Ref),
-		escapeCopyValue(output.Name),
-		escapeJSONB(value),
-		order,
-	)
-	return err
+	return writeCopyRow(w, outputColumns, []copyField{
+		{"execution_id", escapeCopyValue(executionID)},
+		{"ref", escapeCopyValue(output.Ref)},
+		{"name", escapeCopyValue(output.Name)},
+		{"value", escapeJSONB(value)},
+		{"out_order", formatInt(order)},
+	})
 }
 
 func writeReportRow(w io.Writer, executionID string, report *testkube.TestWorkflowReport, order int32) error {
@@ -269,15 +264,14 @@ func writeReportRow(w io.Writer, executionID string, report *testkube.TestWorkfl
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\n",
-		escapeCopyValue(executionID),
-		escapeCopyValue(report.Ref),
-		escapeCopyValue(report.Kind),
-		escapeCopyValue(report.File),
-		escapeJSONB(summary),
-		order,
-	)
-	return err
+	return writeCopyRow(w, reportColumns, []copyField{
+		{"execution_id", escapeCopyValue(executionID)},
+		{"ref", escapeCopyValue(report.Ref)},
+		{"kind", escapeCopyValue(report.Kind)},
+		{"file", escapeCopyValue(report.File)},
+		{"summary", escapeJSONB(summary)},
+		{"rep_order", formatInt(order)},
+	})
 }
 
 func writeResourceAggregationRow(w io.Writer, executionID string,
@@ -291,12 +285,11 @@ func writeResourceAggregationRow(w io.Writer, executionID string,
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\n",
-		escapeCopyValue(executionID),
-		escapeJSONB(global),
-		escapeJSONB(step),
-	)
-	return err
+	return writeCopyRow(w, resourceAggregationColumns, []copyField{
+		{"execution_id", escapeCopyValue(executionID)},
+		{"global", escapeJSONB(global)},
+		{"step", escapeJSONB(step)},
+	})
 }
 
 func writeWorkflowRow(w io.Writer, executionID, workflowType string, workflow *testkube.TestWorkflow) error {
@@ -317,19 +310,18 @@ func writeWorkflowRow(w io.Writer, executionID, workflowType string, workflow *t
 		return err
 	}
 
-	_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%t\t%s\t%s\t%s\n",
-		escapeCopyValue(executionID),
-		workflowType,
-		escapeCopyValue(workflow.Name),
-		escapeCopyValue(workflow.Namespace),
-		escapeCopyValue(workflow.Description),
-		escapeJSONB(labels),
-		escapeJSONB(annotations),
-		escapeJSONB(spec),
-		workflow.ReadOnly,
-		escapeJSONB(status),
-		formatTimestamp(workflow.Created),
-		formatTimestamp(workflow.Updated),
-	)
-	return err
+	return writeCopyRow(w, workflowColumns, []copyField{
+		{"execution_id", escapeCopyValue(executionID)},
+		{"workflow_type", workflowType},
+		{"name", escapeCopyValue(workflow.Name)},
+		{"namespace", escapeCopyValue(workflow.Namespace)},
+		{"description", escapeCopyValue(workflow.Description)},
+		{"labels", escapeJSONB(labels)},
+		{"annotations", escapeJSONB(annotations)},
+		{"spec", escapeJSONB(spec)},
+		{"read_only", strconv.FormatBool(workflow.ReadOnly)},
+		{"status", escapeJSONB(status)},
+		{"created", formatTimestamp(workflow.Created)},
+		{"updated", formatTimestamp(workflow.Updated)},
+	})
 }
