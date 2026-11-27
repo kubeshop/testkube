@@ -6,13 +6,21 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/log"
+)
+
+const (
+	podRetryDelay    = time.Second
+	podRetryMaxDelay = 30 * time.Second
 )
 
 type podWatcher struct {
@@ -95,7 +103,7 @@ func (e *podWatcher) read(sideCtx context.Context) (<-chan readStart, <-chan str
 		if opts.TimeoutSeconds == nil {
 			opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
 		}
-		list, err := e.client.List(ctx, e.opts)
+		list, err := e.client.List(ctx, opts)
 		if err != nil {
 			started <- readStart{err: err}
 			close(started)
@@ -139,8 +147,11 @@ func (e *podWatcher) read(sideCtx context.Context) (<-chan readStart, <-chan str
 			return
 		}
 
-		// There is no update
+		// There is no update. The list version still has to be saved: an object that has not
+		// changed carries the version the server just rejected, so keeping it would send the
+		// next watch back with the same rejected version.
 		if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
+			e.opts.ResourceVersion = list.ResourceVersion
 			started <- readStart{count: 0}
 			close(started)
 			return
@@ -168,8 +179,10 @@ func (e *podWatcher) read(sideCtx context.Context) (<-chan readStart, <-chan str
 	return started, finished
 }
 
-// TODO: handle resource too old
-func (e *podWatcher) watch() error {
+// watch reads a single watch stream. It reports whether any event was delivered, so the caller
+// can reset its backoff after a watch that worked, and it returns a real error when the stream
+// ends. A resourceVersion the API server has aged out arrives here as a watch.Error.
+func (e *podWatcher) watch() (bool, error) {
 	// Initialize the watcher
 	opts := e.opts
 	if opts.TimeoutSeconds == nil {
@@ -177,7 +190,7 @@ func (e *podWatcher) watch() error {
 	}
 	watcher, err := e.client.Watch(e.ctx, opts)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer watcher.Stop()
 
@@ -189,24 +202,33 @@ func (e *podWatcher) watch() error {
 	}()
 
 	// Read the items
+	delivered := false
 	ch := watcher.ResultChan()
 	for {
 		// Prioritize checking for finished watcher
 		select {
 		case <-e.ctx.Done():
-			return e.ctx.Err()
+			return delivered, e.ctx.Err()
 		default:
 		}
 
 		// Wait for the results
 		select {
 		case <-e.ctx.Done():
-			return e.ctx.Err()
+			return delivered, e.ctx.Err()
 		case event, ok := <-ch:
-			// Handle closed watcher
+			// The watch ended without the context being done, so the API server or a proxy closed
+			// it. Report it so the caller lists again instead of reconnecting on the same version.
 			if !ok {
-				return e.ctx.Err()
+				return delivered, errWatchClosed
 			}
+
+			// The API reports an error in the stream, for example a version that is too old. The
+			// watch cannot continue from that version, so the cycle lists the pod again.
+			if event.Type == watch.Error {
+				return delivered, apierrors.FromObject(event.Object)
+			}
+			delivered = true
 
 			// Load the current Kubernetes object
 			object, ok := event.Object.(*corev1.Pod)
@@ -238,7 +260,7 @@ func (e *podWatcher) watch() error {
 			// Handle the deletion
 			if IsPodFinished(object) {
 				e.cancel(ErrDone)
-				return ErrDone
+				return delivered, ErrDone
 			}
 		}
 	}
@@ -262,13 +284,57 @@ func (e *podWatcher) cycle() {
 	}
 	<-finished
 
-	// Watch for the data updates,
-	// and restart the watcher as long as there are no errors
+	// Watch for the data updates. A watch can end for a reason a retry recovers from, most often a
+	// resourceVersion the API server has aged out after a restart. Recovery re-enters through the
+	// list, so every attempt carries a fresh version, and the delay keeps a persistent failure from
+	// saturating the API server. A watch that delivered something resets the delay.
+	retry := backoff{base: podRetryDelay, max: podRetryMaxDelay}
 	var err error
-	for err == nil {
-		err = e.watch()
+	for e.ctx.Err() == nil {
+		var watched bool
+		watched, err = e.watch()
+		if e.ctx.Err() != nil || errors.Is(err, ErrDone) {
+			break
+		}
+
+		delay := retry.delay(watched)
+		log.DefaultLogger.Warnw("watching the pod failed, listing it again",
+			"labelSelector", e.currentOpts().LabelSelector, "retryIn", delay.String(), "error", err)
+		select {
+		case <-e.ctx.Done():
+		case <-time.After(delay):
+		}
+		if e.ctx.Err() != nil {
+			break
+		}
+
+		// List again so the next watch starts from a version the API server still knows. A
+		// temporary failure here, such as the API server still coming back, must not end the
+		// watcher: the loop watches again, fails fast, and waits longer before the next list.
+		started, finished = e.read(context.Background())
+		result = <-started
+		if errors.Is(result.err, ErrDone) {
+			err = result.err
+			break
+		}
+		if result.err != nil {
+			err = result.err
+			continue
+		}
+		<-finished
+	}
+	if err == nil {
+		err = context.Cause(e.ctx)
 	}
 	e.cancel(err)
+}
+
+// currentOpts returns a copy of the options under the lock, because the watch writes the
+// resourceVersion into them while the cycle reads them.
+func (e *podWatcher) currentOpts() metav1.ListOptions {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.opts
 }
 
 func (e *podWatcher) Err() error {
