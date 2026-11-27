@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executiondata"
 )
 
 // formattedExecutionsResult is a compact representation of execution list results.
@@ -100,7 +101,8 @@ type formattedWorker struct {
 // formattedExecutionInfo is a compact representation of execution details.
 // It strips the verbose workflow/resolvedWorkflow specs, detailed output array,
 // and step-level timing, keeping only essential status and identification info.
-// Parallel workers discovered from Output entries are surfaced as the Workers field.
+// Parallel workers discovered from Output entries are surfaced as the Workers field,
+// and the values the steps published as the Outputs field.
 type formattedExecutionInfo struct {
 	ID           string                    `json:"id"`
 	Name         string                    `json:"name"`
@@ -115,6 +117,7 @@ type formattedExecutionInfo struct {
 	ActorName    string                    `json:"actorName,omitempty"`
 	Tags         map[string]string         `json:"tags,omitempty"`
 	Workers      []formattedWorker         `json:"workers,omitempty"`
+	Outputs      map[string]string         `json:"outputs,omitempty"`
 }
 
 // formattedStatusDetails says why an execution did not pass. It holds no user, because the name of
@@ -278,7 +281,20 @@ func FormatExecutionInfo(raw string) (string, error) {
 		}
 	}
 
+	formatted.Outputs = publishedOutputs(&exec)
+
 	return FormatJSON(formatted)
+}
+
+// publishedOutputs returns the values the steps wrote to /testkube/outputs, or nil when
+// there are none, so the field is omitted. Without it a caller that runs a workflow through
+// MCP cannot read what execution().outputs gives a parent workflow.
+func publishedOutputs(exec *testkube.TestWorkflowExecution) map[string]string {
+	outputs := executiondata.OutputsOf(exec)
+	if len(outputs) == 0 {
+		return nil
+	}
+	return outputs
 }
 
 // formattedAbortResult is a compact representation of abort execution result.
@@ -324,11 +340,12 @@ type formattedWaitExecution struct {
 	Status        string                  `json:"status,omitempty"`
 	Duration      string                  `json:"duration,omitempty"`
 	StatusDetails *formattedStatusDetails `json:"statusDetails,omitempty"`
+	Outputs       map[string]string       `json:"outputs,omitempty"`
 }
 
 // FormatWaitForExecutions parses the wait for executions response.
 // The response is an array of execution results. We extract only
-// the essential fields for each: id, name, status, and duration.
+// the essential fields for each: id, name, status, duration, and published outputs.
 func FormatWaitForExecutions(raw string) (string, error) {
 	executions, isEmpty, err := ParseJSON[[]testkube.TestWorkflowExecution](raw)
 	if err != nil {
@@ -355,6 +372,8 @@ func FormatWaitForExecutions(raw string) (string, error) {
 			f.Duration = exec.Result.Duration
 			f.StatusDetails = newFormattedStatusDetails(exec.Result.StatusDetails)
 		}
+
+		f.Outputs = publishedOutputs(&exec)
 
 		formatted.Executions = append(formatted.Executions, f)
 	}
