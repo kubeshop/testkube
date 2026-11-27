@@ -1067,7 +1067,7 @@ func TestPostgresRepositoryLabelScope_Integration(t *testing.T) {
 	}
 
 	_, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Values: []string{"mine"}}))
-	assert.EqualError(t, err, "a label scope needs a label key", "a scope with no key would match every execution")
+	assert.ErrorIs(t, err, testworkflow.ErrLabelScopeKey, "a scope with no key would match every execution")
 }
 
 func sortedWorkflowNames[T any](items []T, workflowName func(T) string) []string {

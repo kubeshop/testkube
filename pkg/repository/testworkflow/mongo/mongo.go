@@ -724,6 +724,7 @@ func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptio
 	// Each method refuses a scope with no key first (testworkflow.CheckLabelScope).
 	if scope := filter.LabelScope(); scope != nil && scope.Key != "" {
 		field := "workflow.labels." + utils.EscapeDots(scope.Key)
+		// $in needs an array, and a scope with no values has a nil slice.
 		values := append([]string{}, scope.Values...)
 		and, _ := query["$and"].(bson.A)
 		query["$and"] = append(and, bson.M{"$or": bson.A{

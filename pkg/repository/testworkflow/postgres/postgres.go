@@ -797,6 +797,19 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 	return totalsFromRows(rows), nil
 }
 
+// labelScopeParams returns the key and the values of the label scope of the filter. The stored
+// label keys have escaped dots, as for the other label filters.
+func labelScopeParams(filter testworkflow.Filter) (string, []string, error) {
+	scope := filter.LabelScope()
+	if scope == nil {
+		return "", nil, nil
+	}
+	if err := testworkflow.CheckLabelScope(filter); err != nil {
+		return "", nil, err
+	}
+	return utils.EscapeDots(scope.Key), scope.Values, nil
+}
+
 func isNameOnlyFilter(f testworkflow.Filter) bool {
 	if f == nil || !f.NameDefined() {
 		return false
@@ -2227,13 +2240,8 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.LabelConditions = conditions
 	}
 
-	if scope := filter.LabelScope(); scope != nil {
-		if err := testworkflow.CheckLabelScope(filter); err != nil {
-			return params, err
-		}
-		// The stored label keys have escaped dots, as for the other label filters.
-		params.LabelScopeKey = utils.EscapeDots(scope.Key)
-		params.LabelScopeValues = scope.Values
+	if params.LabelScopeKey, params.LabelScopeValues, err = labelScopeParams(filter); err != nil {
+		return params, err
 	}
 
 	if filter.TagSelector() != "" {
@@ -2406,14 +2414,11 @@ func (r *PostgresRepository) buildTestWorkflowExecutionTotalParams(filter testwo
 		params.LabelConditions = conditions
 	}
 
-	if scope := filter.LabelScope(); scope != nil {
-		if err := testworkflow.CheckLabelScope(filter); err != nil {
-			return params, err
-		}
-		// The stored label keys have escaped dots, as for the other label filters.
-		params.LabelScopeKey = utils.EscapeDots(scope.Key)
-		params.LabelScopeValues = scope.Values
+	key, values, err := labelScopeParams(filter)
+	if err != nil {
+		return params, err
 	}
+	params.LabelScopeKey, params.LabelScopeValues = key, values
 
 	if filter.TagSelector() != "" {
 		keys, conditions := r.parseTagSelectorToText(filter.TagSelector())
