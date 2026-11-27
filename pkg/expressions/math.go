@@ -206,13 +206,30 @@ func (s *math) itemString(v Expression, right bool) string {
 		// The parser is left-associative, so an operand on the right with the same priority
 		// keeps its parentheses, unless both sides use the same operator and the grouping
 		// doesn't change the result: a-(b-c) is not a-b-c, and a&&(b||c) is not a&&b||c.
-		flatAtSamePriority := !right || (vv.operator == s.operator && isAssociative(s.operator))
+		flatAtSamePriority := !right || (vv.operator == s.operator && isAssociative(s.operator) &&
+			(s.operator != operatorAdd || sameAddKind(s.left.Type(), vv.left.Type(), vv.right.Type())))
 		if (itemPriority > priority || (itemPriority == priority && flatAtSamePriority)) &&
 			(vv.operator != operatorAdd || v.Type() == vv.left.Type()) {
 			return v.String()
 		}
 	}
 	return v.SafeString()
+}
+
+// sameAddKind tells if a+(b+c) can be printed as a+b+c. + also joins strings, so 'x'+(1+2)
+// is "x3" while 'x'+1+2 is "x12": that only holds when all operands are known numbers, or
+// all are strings.
+func sameAddKind(types ...Type) bool {
+	numbers, texts := 0, 0
+	for _, t := range types {
+		switch t {
+		case TypeInt64, TypeFloat64:
+			numbers++
+		case TypeString:
+			texts++
+		}
+	}
+	return numbers == len(types) || texts == len(types)
 }
 
 func isAssociative(op operator) bool {

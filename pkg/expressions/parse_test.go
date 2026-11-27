@@ -113,6 +113,11 @@ func TestCompileMathKeepsGroupingOnTheRight(t *testing.T) {
 		{expr: `(a - b) - c`, want: `a-b-c`},
 		{expr: `a * (b * c)`, want: `a*b*c`},
 		{expr: `a && (b && c)`, want: `a&&b&&c`},
+		{expr: `a + (b + c)`, want: `a+(b+c)`},
+		{expr: `"x" + (a + 1)`, want: `"x"+(a+1)`},
+		{expr: `"x" + (float(a) + 1)`, want: `"x"+(float(a)+1)`},
+		{expr: `float(a) + (float(b) + 1)`, want: `float(a)+float(b)+1`},
+		{expr: `string(a) + (string(b) + "c")`, want: `string(a)+string(b)+"c"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.expr, func(t *testing.T) {
@@ -131,6 +136,8 @@ func TestCompileMapKeepsGroupingOnTheRight(t *testing.T) {
 	// map() and filter() compile the inner expression to a string and back for every item.
 	assert.Equal(t, `[10,9,8]`, MustCompile(`map([1,2,3], "10 - (_.value - 1)")`).String())
 	assert.Equal(t, `[3]`, MustCompile(`filter([1,2,3], "10 - (_.value - 1) < 9")`).String())
+	// + also joins strings, so a sum next to a string keeps its parentheses.
+	assert.Equal(t, `["x3"]`, MustCompile(`map([2], "'x' + (float(_.value) + 1)")`).String())
 }
 
 func TestBuildTemplate(t *testing.T) {
