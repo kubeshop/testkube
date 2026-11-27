@@ -112,15 +112,31 @@
 // per Environment.
 //
 // GITOPS_NAMESPACES sets the namespaces that the controller manager watches, comma separated. An
-// entry is ns, ns=<envId> (sync ns into that Environment) or * (every namespace); empty means
-// TESTKUBE_NAMESPACE. config.ParseGitOpsNamespaces parses it. With GitOps sync on, the agent
-// exits at startup when an envId is not an Environment of the agent. Without sync-multi-namespace
-// it also exits when a namespace maps to an Environment other than the one of the agent token,
-// when several namespaces sync into one Environment, or with * (config.ValidateGitOpsNamespaces).
-// The sync controllers send the namespace of the resource on every delete. The manager runs with
-// leader election unless LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
-// testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE. The manager caches
-// TestWorkflowExecution objects only in TESTKUBE_NAMESPACE, whatever GITOPS_NAMESPACES watches.
+// entry is ns, ns=<envId> or * (every namespace); empty means TESTKUBE_NAMESPACE.
+// config.ParseGitOpsNamespaces parses it. Every namespace syncs into the Environment of the agent
+// token: the sync client sends no Environment with an update or a delete, so with GitOps sync on
+// the agent exits at startup when an envId names any other Environment, whatever the Control
+// Plane advertises. Without sync-multi-namespace it also exits when several namespaces are listed,
+// or with * (config.ValidateGitOpsNamespaces). The sync controllers send the namespace of the
+// resource on every delete. The manager runs with leader election unless LEADER_ELECTION_DISABLED
+// is set, so one replica syncs; the lease is testkube-controllers-<APIServerFullname> in
+// TESTKUBE_NAMESPACE.
+//
+// Only the six syncable kinds widen with GITOPS_NAMESPACES. The manager caches
+// TestWorkflowExecution objects, the Control Plane resources (Boards and the AI kinds) and the
+// ConfigMaps Skills are read from only in TESTKUBE_NAMESPACE
+// (controller.ControlPlaneResourceCacheObjects): a Control Plane resource is synced by kind and
+// name alone, so same-name resources of two namespaces would overwrite each other, and its access
+// is checked in TESTKUBE_NAMESPACE only.
+//
+// The agent needs get, list and watch on the six syncable kinds in every namespace it watches
+// (testworkflows, testworkflowtemplates and workflowtriggers in testworkflows.testkube.io,
+// testtriggers in tests.testkube.io, and webhooks and webhooktemplates in executor.testkube.io),
+// and with * across the cluster, through a ClusterRole. Without it an informer cannot sync its
+// cache, and the manager, and with it the agent, stops. Listing a namespace in
+// additionalNamespaces of the testkube-api chart is not enough: the Role it renders there covers
+// only the trigger watchers' built-in kinds. Add the six kinds with rbac.extraWatchedResources,
+// which that Role includes, or grant them with a Role or ClusterRole of your own.
 //
 // The Control Plane side lives in testkube-cloud-api: it persists the owner on the six syncable
 // tables and enforces it in internal/sync/ownership.go, on every Upsert and Delete path.
