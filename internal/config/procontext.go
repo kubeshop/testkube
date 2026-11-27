@@ -60,7 +60,11 @@ type ProContext struct {
 	// MultiNamespaceSyncSupportedInControlPlane is whether the Control Plane accepts several
 	// namespaces and Environments over one sync connection (capabilities.CapabilityMultiNamespaceSync).
 	MultiNamespaceSyncSupportedInControlPlane bool
-	Agent                                     ProContextAgent
+	// ControlPlaneEnvID is the Environment the Control Plane reports for the agent token
+	// (GetProContext). EnvID is TESTKUBE_PRO_ENV_ID when that is set, which may differ, but a sync
+	// request carries no Environment, so it lands in ControlPlaneEnvID.
+	ControlPlaneEnvID string
+	Agent             ProContextAgent
 }
 
 func (p *ProContext) GetEnvSlug(id string) string {

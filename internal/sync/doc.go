@@ -113,14 +113,17 @@
 //
 // GITOPS_NAMESPACES sets the namespaces that the controller manager watches, comma separated. An
 // entry is ns, ns=<envId> or * (every namespace); empty means TESTKUBE_NAMESPACE.
-// config.ParseGitOpsNamespaces parses it. Every namespace syncs into the Environment of the agent
-// token: the sync client sends no Environment with an update or a delete, so with GitOps sync on
-// the agent exits at startup when an envId names any other Environment, whatever the Control
-// Plane advertises. Without sync-multi-namespace it also exits when several namespaces are listed,
-// or with * (config.ValidateGitOpsNamespaces). The sync controllers send the namespace of the
-// resource on every delete. The manager runs with leader election unless LEADER_ELECTION_DISABLED
-// is set, so one replica syncs; the lease is testkube-controllers-<APIServerFullname> in
-// TESTKUBE_NAMESPACE.
+// config.ParseGitOpsNamespaces parses it. Every namespace syncs into the Environment the Control
+// Plane reports for the agent token, whatever TESTKUBE_PRO_ENV_ID says: the sync client sends no
+// Environment with an update or a delete, so with GitOps sync on the agent exits at startup when an
+// envId names any other Environment, whatever the Control Plane advertises. Without
+// sync-multi-namespace it also exits for any namespace other than TESTKUBE_NAMESPACE, and so for
+// several namespaces or *: such a Control Plane deletes in the agent namespace but updates in the
+// namespace of the payload, so its ownership check could refuse the delete of a resource synced
+// from another namespace (config.ValidateGitOpsNamespaces). The sync controllers send the
+// namespace of the resource on every delete. The manager runs with leader election unless
+// LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
+// testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE.
 //
 // Only the six syncable kinds widen with GITOPS_NAMESPACES. The manager caches
 // TestWorkflowExecution objects, the Control Plane resources (Boards and the AI kinds) and the

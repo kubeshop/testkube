@@ -354,6 +354,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		return proContext, fmt.Errorf("cannot get pro context: %v", err)
 	}
 
+	proContext.ControlPlaneEnvID = foundProContext.EnvId
 	if proContext.EnvID == "" {
 		proContext.EnvID = foundProContext.EnvId
 	}

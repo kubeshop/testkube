@@ -368,7 +368,7 @@ func main() {
 	gitopsNamespaces, err := intconfig.ParseGitOpsNamespaces(cfg.GitOpsNamespaces, cfg.TestkubeNamespace)
 	commons.ExitOnError("parsing GITOPS_NAMESPACES", err)
 	if cfg.GitOpsSyncKubernetesToCloudEnabled {
-		commons.ExitOnError("checking GITOPS_NAMESPACES against the Control Plane", intconfig.ValidateGitOpsNamespaces(gitopsNamespaces, proContext))
+		commons.ExitOnError("checking GITOPS_NAMESPACES against the Control Plane", intconfig.ValidateGitOpsNamespaces(gitopsNamespaces, cfg.TestkubeNamespace, proContext))
 	}
 
 	// Scope the emitter lease to the AgentID so that agents for different
