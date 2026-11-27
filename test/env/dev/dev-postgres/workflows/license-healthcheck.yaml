@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: healthcheck
     environment: prod
+  annotations:
+    testkube.io/description: "Production health check: posts a license key to the license endpoint and checks the answer."
 spec:
   pod:
     # Healthchecks drive prod alerts; keep them off spot nodes so a preemption does not page as an outage.

@@ -12,6 +12,8 @@ metadata:
     dev-quality-gate: "true"
     team-backend: "true"
     team-frontend: "true"
+  annotations:
+    testkube.io/description: "Checks a revision of the cloud dashboard end to end with Playwright against .dev, with a scenario coverage report."
 spec:
   config:
     revision:
@@ -134,6 +136,8 @@ metadata:
     playwright-traces: "on"
     category: e2e-ui-testing
     distributed: "true"
+  annotations:
+    testkube.io/description: "Checks the cloud dashboard end to end with Playwright against .dev, sharded across parallel workers."
 spec:
   content:
     git:

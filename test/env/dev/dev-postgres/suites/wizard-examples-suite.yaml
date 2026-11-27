@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: workflow-suite
     dev-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Groups the example workflows of the dashboard creation wizard, to check that the examples users start from still work."
 description: "UI examples"
 spec:
   container:

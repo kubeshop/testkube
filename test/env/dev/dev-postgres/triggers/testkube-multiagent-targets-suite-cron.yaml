@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
+  annotations:
+    testkube.io/description: "Starts the runner targeting suite every 4 hours, to check runner targeting on .dev."
 spec:
   container:
     resources:

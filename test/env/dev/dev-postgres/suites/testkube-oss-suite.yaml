@@ -7,6 +7,8 @@ metadata:
     type: suite
     tool: testkube-oss
     dev-quality-gate: "true"
+  annotations:
+    testkube.io/description: "Groups the Testkube OSS tests, to check the OSS installations with MongoDB and with PostgreSQL."
 spec:
   container:
     resources:
