@@ -590,3 +590,60 @@ func TestMapPodConfigResourcesRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestMapStepAgentRoundTrips(t *testing.T) {
+	agent := &testworkflowsv1.StepAgent{
+		Name:     "failure-triage",
+		Prompt:   "Find the cause in {{ execution.id }}.",
+		Model:    "{{ config.model }}",
+		Thinking: "high",
+	}
+	operations := testworkflowsv1.StepOperations{Agent: agent}
+
+	tests := []struct {
+		name      string
+		roundTrip func() *testworkflowsv1.StepAgent
+		want      *testworkflowsv1.StepAgent
+	}{
+		{
+			name: "step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapStepAPIToKube(MapStepKubeToAPI(testworkflowsv1.Step{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "independent step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapIndependentStepAPIToKube(MapIndependentStepKubeToAPI(testworkflowsv1.IndependentStep{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "parallel step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapStepParallelAPIToKube(MapStepParallelKubeToAPI(testworkflowsv1.StepParallel{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "independent parallel step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapIndependentStepParallelAPIToKube(MapIndependentStepParallelKubeToAPI(testworkflowsv1.IndependentStepParallel{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "step with no agent",
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapStepAPIToKube(MapStepKubeToAPI(testworkflowsv1.Step{})).Agent
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.roundTrip())
+		})
+	}
+}

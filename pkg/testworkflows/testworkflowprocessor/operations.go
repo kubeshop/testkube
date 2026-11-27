@@ -345,6 +345,15 @@ func StubExecute(_ InternalProcessor, _ Intermediate, _ stage.Container, step te
 	return nil, nil
 }
 
+// StubAgent refuses the `agent` step. Without it no processor claims the step, and the
+// workflow runs with the step missing and no error.
+func StubAgent(_ InternalProcessor, _ Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	if step.Agent != nil {
+		return nil, constants.ErrOpenSourceAgentOperationIsNotAvailable
+	}
+	return nil, nil
+}
+
 func StubParallel(_ InternalProcessor, _ Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Parallel != nil {
 		return nil, constants.ErrOpenSourceParallelOperationIsNotAvailable

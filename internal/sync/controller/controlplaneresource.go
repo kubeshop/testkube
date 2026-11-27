@@ -77,6 +77,33 @@ func SyncedControlPlaneKinds(advertised []capabilities.Capability) []declarative
 	return out
 }
 
+// ControlPlaneResourceCacheObjects returns an empty object of each kind that
+// NewControlPlaneResourceSyncControllers may sync and whose CRD is installed, and a ConfigMap when one
+// of them reads Skills from ConfigMaps. The manager caches these only in the runner's namespace,
+// whatever GITOPS_NAMESPACES watches: their sync names a resource by kind and name alone, so the
+// same name in two namespaces would overwrite or delete each other, and their access is checked in
+// the runner's namespace only. A kind whose CRD is not installed is left out, because the manager
+// resolves every object of its per-object cache settings when it starts.
+func ControlPlaneResourceCacheObjects(mapper meta.RESTMapper, advertised []capabilities.Capability) ([]client.Object, error) {
+	var objects []client.Object
+	configMaps := false
+	for _, kind := range SyncedControlPlaneKinds(advertised) {
+		_, err := mapper.RESTMapping(kind.GroupVersionKind().GroupKind(), kind.GroupVersion.Version)
+		if meta.IsNoMatchError(err) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("look up the %s CRD: %w", kind.Kind, err)
+		}
+		objects = append(objects, kind.New())
+		configMaps = configMaps || readsSkillSources(kind)
+	}
+	if configMaps {
+		objects = append(objects, &corev1.ConfigMap{})
+	}
+	return objects, nil
+}
+
 // NewControlPlaneResourceSyncControllers registers a sync controller for each synced kind that the
 // Control Plane takes (it advertises the kind's capability) and whose custom resource the runner
 // can watch in namespace. A kind whose CRD is not installed, that the

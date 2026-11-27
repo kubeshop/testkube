@@ -23,9 +23,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	testworkflowsv1 "github.com/kubeshop/testkube/api/testworkflows/v1"
@@ -367,7 +369,7 @@ func main() {
 	gitopsNamespaces, err := intconfig.ParseGitOpsNamespaces(cfg.GitOpsNamespaces, cfg.TestkubeNamespace)
 	commons.ExitOnError("parsing GITOPS_NAMESPACES", err)
 	if cfg.GitOpsSyncKubernetesToCloudEnabled {
-		commons.ExitOnError("checking GITOPS_NAMESPACES against the Control Plane", intconfig.ValidateGitOpsNamespaces(gitopsNamespaces, proContext))
+		commons.ExitOnError("checking GITOPS_NAMESPACES against the Control Plane", intconfig.ValidateGitOpsNamespaces(gitopsNamespaces, cfg.TestkubeNamespace, proContext))
 	}
 
 	// Scope the emitter lease to the AgentID so that agents for different
@@ -751,16 +753,37 @@ func main() {
 			loggedNamespaces = gitopsNamespaces.Names()
 		}
 		log.DefaultLogger.Infow("kubernetes controller manager", "namespaces", loggedNamespaces, "leaderElection", !cfg.LeaderElectionDisabled)
+
+		// Executions run only in the agent namespace, whatever GITOPS_NAMESPACES watches. So are
+		// the Control Plane resources synced: their sync names a resource by kind and name alone,
+		// and their access is checked in the agent namespace only. The manager resolves every
+		// object listed here when it is created, so a kind is listed only when its controller
+		// runs: a GitOps-only agent may lack the TestWorkflowExecution CRD.
+		agentNamespaceOnly := func() cache.ByObject {
+			return cache.ByObject{Namespaces: map[string]cache.Config{cfg.TestkubeNamespace: {}}}
+		}
+		cachedByObject := map[ctrlclient.Object]cache.ByObject{}
+		if cfg.EnableK8sControllers {
+			cachedByObject[&testworkflowsv1.TestWorkflowExecution{}] = agentNamespaceOnly()
+		}
+		syncsControlPlaneResources := proContext.CloudStorageSupportedInControlPlane && cfg.GitOpsSyncKubernetesToCloudEnabled &&
+			cfg.GitOpsSyncControlPlaneResourcesEnabled && len(proContext.ControlPlaneResourceCapabilities) > 0
+		if syncsControlPlaneResources {
+			httpClient, err := rest.HTTPClientFor(kubeConfig)
+			commons.ExitOnError("creating kubernetes HTTP client", err)
+			mapper, err := apiutil.NewDynamicRESTMapper(kubeConfig, httpClient)
+			commons.ExitOnError("creating kubernetes REST mapper", err)
+			objects, err := synccontroller.ControlPlaneResourceCacheObjects(mapper, proContext.ControlPlaneResourceCapabilities)
+			commons.ExitOnError("looking up the Control Plane resource CRDs", err)
+			for _, obj := range objects {
+				cachedByObject[obj] = agentNamespaceOnly()
+			}
+		}
 		mgr, err := manager.New(kubeConfig, manager.Options{
 			Scheme: scheme,
 			Cache: cache.Options{
 				DefaultNamespaces: watchedNamespaces,
-				// Executions run only in the agent namespace, whatever GITOPS_NAMESPACES watches.
-				ByObject: map[ctrlclient.Object]cache.ByObject{
-					&testworkflowsv1.TestWorkflowExecution{}: {
-						Namespaces: map[string]cache.Config{cfg.TestkubeNamespace: {}},
-					},
-				},
+				ByObject:          cachedByObject,
 			},
 			LeaderElection:          !cfg.LeaderElectionDisabled,
 			LeaderElectionNamespace: cfg.TestkubeNamespace,

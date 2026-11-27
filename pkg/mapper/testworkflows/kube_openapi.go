@@ -1063,6 +1063,15 @@ func MapStepExecuteKubeToAPI(v testworkflowsv1.StepExecute) testkube.TestWorkflo
 	}
 }
 
+func MapStepAgentKubeToAPI(v testworkflowsv1.StepAgent) testkube.TestWorkflowStepAgent {
+	return testkube.TestWorkflowStepAgent{
+		Name:     v.Name,
+		Prompt:   v.Prompt,
+		Model:    v.Model,
+		Thinking: v.Thinking,
+	}
+}
+
 func MapStepArtifactsCompressionKubeToAPI(v testworkflowsv1.ArtifactCompression) testkube.TestWorkflowStepArtifactsCompression {
 	return testkube.TestWorkflowStepArtifactsCompression{
 		Name: v.Name,
@@ -1145,6 +1154,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Shell:       v.Shell,
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:       common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
@@ -1182,6 +1192,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Shell:       v.Shell,
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:       common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
@@ -1320,6 +1331,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		WorkingDir: MapStringToBoxedString(v.WorkingDir),
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:      common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapStepKubeToAPI),
@@ -1347,6 +1359,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		WorkingDir: MapStringToBoxedString(v.WorkingDir),
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:      common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),

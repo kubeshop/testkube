@@ -114,14 +114,37 @@
 //
 // GITOPS_NAMESPACES sets the namespaces that the controller manager watches, comma separated. An
 // entry is ns, ns=<envId> (sync ns into that Environment) or * (every namespace); empty means
-// TESTKUBE_NAMESPACE. config.ParseGitOpsNamespaces parses it. With GitOps sync on, the agent
-// exits at startup when an envId is not an Environment of the agent. Without sync-multi-namespace
-// it also exits when a namespace maps to an Environment other than the one of the agent token,
-// when several namespaces sync into one Environment, or with * (config.ValidateGitOpsNamespaces).
-// The sync controllers send the namespace of the resource on every delete. The manager runs with
-// leader election unless LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
-// testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE. The manager caches
-// TestWorkflowExecution objects only in TESTKUBE_NAMESPACE, whatever GITOPS_NAMESPACES watches.
+// TESTKUBE_NAMESPACE. config.ParseGitOpsNamespaces parses it. A namespace without an envId syncs
+// into the Environment the Control Plane reports for the agent token (ProContext.TokenEnvID),
+// whatever TESTKUBE_PRO_ENV_ID says. With GitOps sync on, the agent exits at startup when an envId
+// is not an Environment of the agent. Without sync-multi-namespace it also exits when a namespace
+// maps to an Environment other than the one of the agent token, and for any namespace other than
+// TESTKUBE_NAMESPACE, so for several namespaces or *: such a Control Plane reads neither the
+// environment-id header nor the namespace of a request, and deletes in the agent namespace while
+// an update takes the namespace of its payload, so its ownership check could refuse the delete of
+// a resource synced from another namespace (config.ValidateGitOpsNamespaces). The sync
+// controllers send the namespace of the resource on every delete. The manager runs with leader election unless
+// LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
+// testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE.
+//
+// Only the six syncable kinds widen with GITOPS_NAMESPACES. The manager caches
+// TestWorkflowExecution objects, the Control Plane resources (Boards and the AI kinds) and the
+// ConfigMaps Skills are read from only in TESTKUBE_NAMESPACE
+// (controller.ControlPlaneResourceCacheObjects): a Control Plane resource is synced by kind and
+// name alone, so same-name resources of two namespaces would overwrite each other, and its access
+// is checked in TESTKUBE_NAMESPACE only. The manager resolves each of these kinds when it is
+// created, so it lists one only when its controller runs: TestWorkflowExecution with
+// ENABLE_K8S_CONTROLLERS, and a Control Plane kind only when its CRD is installed, so a missing
+// CRD of a kind the agent does not use never stops it.
+//
+// The agent needs get, list and watch on the six syncable kinds in every namespace it watches
+// (testworkflows, testworkflowtemplates and workflowtriggers in testworkflows.testkube.io,
+// testtriggers in tests.testkube.io, and webhooks and webhooktemplates in executor.testkube.io),
+// and with * across the cluster, through a ClusterRole. Without it an informer cannot sync its
+// cache, and the manager, and with it the agent, stops. Listing a namespace in
+// additionalNamespaces of the testkube-api chart is not enough: the Role it renders there covers
+// only the trigger watchers' built-in kinds. Add the six kinds with rbac.extraWatchedResources,
+// which that Role includes, or grant them with a Role or ClusterRole of your own.
 //
 // A store call takes a Target (target.go): the namespace of the resource and the Environment that
 // config.GitOpsNamespaces.EnvironmentID maps it to, empty for the Environment of the agent token.

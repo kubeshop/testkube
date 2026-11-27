@@ -79,6 +79,9 @@ type StepOperations struct {
 	// execute other Testkube resources
 	Execute *StepExecute `json:"execute,omitempty" expr:"include"`
 
+	// run an AI Agent of the environment
+	Agent *StepAgent `json:"agent,omitempty" expr:"include"`
+
 	// scrape artifacts from the volumes
 	Artifacts *StepArtifacts `json:"artifacts,omitempty" expr:"include"`
 
@@ -164,6 +167,22 @@ type StepExecute struct {
 
 	// workflows to run
 	Workflows []StepExecuteWorkflow `json:"workflows,omitempty" expr:"include"`
+}
+
+type StepAgent struct {
+	// name of the AI Agent
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name" expr:"template"`
+
+	// message for the AI Agent
+	Prompt string `json:"prompt,omitempty" expr:"template"`
+
+	// model for the turn; when empty, the AI Agent uses its default model
+	Model string `json:"model,omitempty" expr:"template"`
+
+	// reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+	// when empty, the AI Agent uses its default effort
+	Thinking string `json:"thinking,omitempty" expr:"template"`
 }
 
 type TarballRequest struct {
