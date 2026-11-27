@@ -1,0 +1,11 @@
+# The Control Plane resolves only Environment Credentials, so a Vault path
+# would be skipped at run time: it is refused instead.
+apiVersion: ai.testkube.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: vault-backed
+spec:
+  provider: openai
+  apiKey: vault://kv/openai
+  extraHeaders:
+    Authorization: Bearer sk-live-123

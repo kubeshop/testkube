@@ -29,6 +29,7 @@ func NewConfigCmd() *cobra.Command {
 					{"Context type     ", string(cfg.ContextType)},
 					{"Namespace        ", cfg.Namespace},
 					{"API URI          ", cfg.APIURI},
+					{"Client           ", cfg.Client},
 					{"API Server Name  ", cfg.APIServerName},
 					{"API Server Port  ", fmt.Sprintf("%d", cfg.APIServerPort)},
 					{"Headers          ", testkube.MapToString(cfg.Headers)},
@@ -51,6 +52,7 @@ func NewConfigCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&list, "list", false, "list current configuration values")
 
 	cmd.AddCommand(commands.NewConfigureNamespaceCmd())
+	cmd.AddCommand(commands.NewConfigureClientCmd())
 	cmd.AddCommand(commands.NewConfigureAPIURICmd())
 	cmd.AddCommand(commands.NewConfigureHeadersCmd())
 	cmd.AddCommand(commands.NewConfigureAPIServerNameCmd())

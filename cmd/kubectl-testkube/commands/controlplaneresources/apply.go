@@ -35,10 +35,13 @@ func NewApplyCmd(newClient ClientFactory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "apply -f <file|dir|->",
-		Short: "Apply Control Plane resources from YAML",
-		Long: `Create or update Control Plane resources from YAML or JSON.
+		Short: "Create or update Control Plane resources from YAML manifests",
+		Long: `Create or update Control Plane resources from YAML or JSON manifests: Boards, MCP Servers, LLM Providers, Skills and AI Agents.
+A resource that exists is updated to match the manifest; one that doesn't is created.
 
-Each file may hold several documents. A directory applies every .yaml, .yml and .json file in it, and "-" reads from stdin.
+Test Workflows, Test Workflow Templates, triggers, webhooks and runners are not applied here: use "testkube create <kind>" for them.
+
+Each file may hold several documents, applied with each kind after the kinds it refers to. A directory applies every .yaml, .yml and .json file in it, and "-" reads from stdin.
 Every document is validated locally before anything is sent; nothing is sent if any document is invalid.
 Use --dry-run to validate without sending anything; with -o yaml it prints the objects as they would be sent, defaults filled in.`,
 		Example: `  testkube apply -f board.yaml
@@ -73,7 +76,7 @@ func ReadInputs(paths []string, stdin io.Reader) ([]declarative.Object, error) {
 	read := func(name string, r io.Reader) error {
 		decoded, err := declarative.Decode(r)
 		if err != nil {
-			return fmt.Errorf("%s: %w", name, err)
+			return fmt.Errorf("%s: %w%s", name, err, createHint(err))
 		}
 		objects = append(objects, decoded...)
 		return nil
@@ -103,6 +106,31 @@ func ReadInputs(paths []string, stdin io.Reader) ([]declarative.Object, error) {
 		return nil, errors.New("no objects found in the input")
 	}
 	return objects, nil
+}
+
+// createCommands is the "testkube create" command of each kind that is created there rather than
+// applied. Webhooks are created from flags, the others from a manifest.
+var createCommands = map[string]string{
+	"TestWorkflow":         "testkube create testworkflow -f <file>",
+	"TestWorkflowTemplate": "testkube create testworkflowtemplate -f <file>",
+	"TestTrigger":          "testkube create testtrigger -f <file>",
+	"WorkflowTrigger":      "testkube create workflowtrigger -f <file>",
+	"Webhook":              "testkube create webhook",
+	"WebhookTemplate":      "testkube create webhooktemplate",
+}
+
+// createHint points a manifest of a kind that "testkube create" handles to that command, or is
+// empty for any other error.
+func createHint(err error) string {
+	var unsupported *declarative.UnsupportedKindError
+	if !errors.As(err, &unsupported) || !strings.HasSuffix(strings.SplitN(unsupported.APIVersion, "/", 2)[0], ".testkube.io") {
+		return ""
+	}
+	command, ok := createCommands[unsupported.Kind]
+	if !ok {
+		return ""
+	}
+	return fmt.Sprintf("; a %s is created with %q", unsupported.Kind, command)
 }
 
 func expandPath(path string) ([]string, error) {
@@ -172,6 +200,9 @@ func Apply(ctx context.Context, c client.Client, objects []declarative.Object, o
 		return nil
 	}
 
+	// Dependencies first, so an AI Agent finds the MCP servers it links to
+	// even when the input declares them after it.
+	declarative.SortForApply(normalized)
 	var failed []error
 	var stored []declarative.Object
 	for _, obj := range normalized {

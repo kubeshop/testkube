@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	aiv1 "github.com/kubeshop/testkube/api/ai/v1alpha1"
 	commonv1 "github.com/kubeshop/testkube/api/common/v1"
 	insightsv1 "github.com/kubeshop/testkube/api/insights/v1alpha1"
 )
@@ -66,6 +67,9 @@ func (k Kind) Name() string {
 	return k.Names[0]
 }
 
+// kinds is in apply order: a kind comes after every kind it refers to, so
+// SortForApply can put an AI Agent after the MCP servers, LLM providers and
+// Skills in the same input.
 var kinds = []Kind{
 	{
 		GroupVersion: insightsv1.GroupVersion,
@@ -75,6 +79,52 @@ var kinds = []Kind{
 		Scope:        ScopeOrganization,
 		newObject:    func() Object { return &insightsv1.Board{} },
 	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.LLMProviderKind,
+		Resource:     aiv1.LLMProviderResource,
+		Names:        []string{"llmprovider", "llmproviders"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.LLMProvider{} },
+	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.MCPServerKind,
+		Resource:     aiv1.MCPServerResource,
+		Names:        []string{"mcpserver", "mcpservers"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.MCPServer{} },
+	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.SkillKind,
+		Resource:     aiv1.SkillResource,
+		Names:        []string{"skill", "skills"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.Skill{} },
+	},
+	{
+		GroupVersion: aiv1.GroupVersion,
+		Kind:         aiv1.AIAgentKind,
+		Resource:     aiv1.AIAgentResource,
+		Names:        []string{"aiagent", "aiagents"},
+		Scope:        ScopeEnvironment,
+		newObject:    func() Object { return &aiv1.AIAgent{} },
+	},
+}
+
+// SortForApply orders objects so each comes after the kinds it refers to,
+// keeping the input order within a kind. Applying an AI Agent and its MCP
+// server from one input then works whatever order the input has them in.
+func SortForApply(objects []Object) {
+	rank := func(obj Object) int {
+		kind, err := KindOf(obj)
+		if err != nil {
+			return len(kinds)
+		}
+		return slices.IndexFunc(kinds, func(k Kind) bool { return k.GroupVersionKind() == kind.GroupVersionKind() })
+	}
+	slices.SortStableFunc(objects, func(a, b Object) int { return rank(a) - rank(b) })
 }
 
 // Kinds returns every supported kind.
@@ -84,20 +134,32 @@ func Kinds() []Kind {
 
 // LookupKind returns the kind an object declares with apiVersion and kind.
 func LookupKind(apiVersion, kind string) (Kind, error) {
-	known := false
+	knownAPIVersion := false
 	for _, k := range kinds {
 		if k.GroupVersion.String() != apiVersion {
 			continue
 		}
-		known = true
+		knownAPIVersion = true
 		if k.Kind == kind {
 			return k, nil
 		}
 	}
-	if !known {
-		return Kind{}, fmt.Errorf("apiVersion %q is not a Control Plane resource (supported: %s)", apiVersion, strings.Join(supported(), ", "))
+	return Kind{}, &UnsupportedKindError{APIVersion: apiVersion, Kind: kind, knownAPIVersion: knownAPIVersion}
+}
+
+// UnsupportedKindError is the error for an object whose apiVersion and kind are not a Control
+// Plane resource, so a caller can tell the person where that kind is managed instead.
+type UnsupportedKindError struct {
+	APIVersion      string
+	Kind            string
+	knownAPIVersion bool
+}
+
+func (e *UnsupportedKindError) Error() string {
+	if !e.knownAPIVersion {
+		return fmt.Sprintf("apiVersion %q is not a Control Plane resource (supported: %s)", e.APIVersion, strings.Join(supported(), ", "))
 	}
-	return Kind{}, fmt.Errorf("unknown kind %q for %s (supported: %s)", kind, apiVersion, strings.Join(supported(), ", "))
+	return fmt.Sprintf("unknown kind %q for %s (supported: %s)", e.Kind, e.APIVersion, strings.Join(supported(), ", "))
 }
 
 // LookupName returns the kind a CLI name refers to, case-insensitively.
@@ -134,6 +196,14 @@ func supported() []string {
 func StatusOf(obj Object) commonv1.ControlPlaneResourceStatus {
 	switch o := obj.(type) {
 	case *insightsv1.Board:
+		return o.Status
+	case *aiv1.AIAgent:
+		return o.Status.ControlPlaneResourceStatus
+	case *aiv1.MCPServer:
+		return o.Status.ControlPlaneResourceStatus
+	case *aiv1.LLMProvider:
+		return o.Status
+	case *aiv1.Skill:
 		return o.Status
 	}
 	return commonv1.ControlPlaneResourceStatus{}

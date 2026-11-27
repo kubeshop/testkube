@@ -17,6 +17,12 @@
 // sync.Once. To support a new cluster type, add detection entries to the right layers in
 // cluster_type.go and test cases in cluster_type_test.go.
 //
+// CLI events (commands, errors, previews and the MCP server's tool calls) skip the detection in
+// a cloud context, and MCP tool calls in their environment context (RunContextTypeMCPEnvironment),
+// and send no cluster type: both talk to the Control Plane, and connecting to the cluster of the
+// local kubeconfig would run its credential plugin, such as gcloud's, which can fail loudly or
+// prompt after a command that never needed that cluster.
+//
 // # Agent heartbeat
 //
 // cmd/api-server/services/telemetry.go drives the loop that sends testkube_api_heartbeat events
@@ -24,6 +30,11 @@
 // cmd/api-server/services/capabilities.go extracts those capability tags (persona, mode, feature
 // flags) from the runtime config; a new agent feature or toggle that should be tracked goes there
 // and in capabilities_test.go.
+//
+// A GitOps runner that syncs Control Plane resources also reports how many of each kind it syncs
+// (the gitops_synced_resources param, Segment property gitopsSyncedResources, such as
+// {"boards": 3, "aiagents": 1}), read for each heartbeat from internal/sync/controller
+// SyncedResources. It holds counts only, never names.
 //
 // The hosted-runner tag marks runners that Testkube provisions for trial users, detected from the
 // tkcagent_hr_ prefix the Control Plane assigns to RUNNER_NAME. Keep hostedRunnerNamePrefix in

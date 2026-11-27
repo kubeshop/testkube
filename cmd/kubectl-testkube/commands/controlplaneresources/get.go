@@ -28,7 +28,7 @@ func newGetCmd(kind declarative.Kind, newClient ClientFactory) *cobra.Command {
 		Aliases: kind.Names[1:],
 		Short:   fmt.Sprintf("Get %s resources from the Control Plane", kind.Kind),
 		Long: fmt.Sprintf(`Get one %[1]s or list them all. With -o yaml or -o json the output is in the
-form "testkube apply" takes, so a %[1]s built in the dashboard can be exported and kept in Git.`, kind.Kind),
+form "testkube apply" takes, so what is built in the dashboard can be exported and kept in Git.`, kind.Kind),
 		Example: fmt.Sprintf("  testkube get %[1]s\n  testkube get %[1]s <name> -o yaml > %[1]s.yaml", kind.Name()),
 		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {

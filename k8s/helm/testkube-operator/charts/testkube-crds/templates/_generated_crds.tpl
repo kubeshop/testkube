@@ -2,6 +2,14 @@
 
 {{- define "testkube-crds.render" -}}
 
+{{ include "testkube-crds.item.ai.testkube.io_aiagents.yaml" . }}
+
+{{ include "testkube-crds.item.ai.testkube.io_llmproviders.yaml" . }}
+
+{{ include "testkube-crds.item.ai.testkube.io_mcpservers.yaml" . }}
+
+{{ include "testkube-crds.item.ai.testkube.io_skills.yaml" . }}
+
 {{ include "testkube-crds.item.executor.testkube.io_executors.yaml" . }}
 
 {{ include "testkube-crds.item.executor.testkube.io_webhooks.yaml" . }}
@@ -34,6 +42,806 @@
 
 {{ include "testkube-crds.item.testworkflows.testkube.io_workflowtriggers.yaml" . }}
 
+{{- end }}
+
+{{- define "testkube-crds.item.ai.testkube.io_aiagents.yaml" -}}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: aiagents.ai.testkube.io
+spec:
+  group: ai.testkube.io
+  names:
+    kind: AIAgent
+    listKind: AIAgentList
+    plural: aiagents
+    singular: aiagent
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.displayName
+      name: Display Name
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AIAgent is an AI Agent of an environment. metadata.name is its
+          slug.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AIAgentSpec is what an AI Agent does and what it may use.
+            properties:
+              a2a:
+                description: |-
+                  A2A serves the agent over the Agent2Agent (A2A) protocol. Leaving it
+                  out turns A2A off for the agent: the manifest is the source of truth,
+                  and an export always writes it.
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled serves the agent over A2A. It never widens access: the agent
+                      is served only when the deployment serves A2A and the organization
+                      turned it on, and a caller still needs a token whose role allows it
+                      and has to pass the agent's access rules.
+                    type: boolean
+                type: object
+              access:
+                description: |-
+                  Access links the agent to roles and resource groups. When it is
+                  omitted, the agent's links are left as they are.
+                properties:
+                  resourceGroups:
+                    description: |-
+                      ResourceGroups linked to the agent. This is how an agent joins a
+                      resource group: the testkube.io/group label a Test Workflow uses is
+                      refused on an agent, since an agent can join several.
+                    items:
+                      description: AIAgentResourceGroup refers to a resource group
+                        of the organization.
+                      properties:
+                        name:
+                          description: Name is the resource group's slug.
+                          minLength: 1
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  roles:
+                    description: |-
+                      Roles linked to the agent: environment roles, of read, run, write and
+                      admin.
+                    items:
+                      type: string
+                    type: array
+                type: object
+              defaultModel:
+                description: |-
+                  DefaultModel is the model a chat with the agent starts with. Empty
+                  means the platform default.
+                type: string
+              description:
+                description: Description of the agent.
+                type: string
+              displayName:
+                description: |-
+                  DisplayName is the agent's name in the dashboard. It defaults to
+                  metadata.name, and is unique within the environment.
+                type: string
+              instructions:
+                description: Instructions are the agent's system prompt.
+                minLength: 1
+                type: string
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels categorize the agent in the dashboard.
+                type: object
+              mcpServers:
+                description: |-
+                  MCPServers are the MCP servers the agent uses, each once. Applying a
+                  list replaces the agent's links, so a server left out is unlinked, and
+                  an empty list unlinks them all. When mcpServers is omitted, the
+                  agent's links are left as they are, as with skills and access. The
+                  built-in Testkube MCP server is "testkube"; when it is left out of a
+                  list, the agent keeps its link to it as it is (the default tools for a
+                  new agent).
+                items:
+                  description: AIAgentMCPServer is an AI Agent's link to an MCP server.
+                  properties:
+                    headers:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        Headers are sent to the server to sign in, only with shared_key. A
+                        value reads an Environment Credential as {{`{{`}} credential("name") {{`}}`}}, as
+                        webhook headers do, such as Authorization set to
+                        'Bearer {{`{{`}} credential("github-token") {{`}}`}}'. A header that carries a
+                        credential (Authorization, Cookie, or a name with token, secret or key
+                        in it) has to read one, so no key is written in the manifest. A
+                        shared_key link without headers keeps the key it has, such as one set
+                        in the dashboard.
+                      type: object
+                    name:
+                      description: |-
+                        Name is the MCPServer's metadata.name, or "testkube" for the built-in
+                        server.
+                      minLength: 1
+                      type: string
+                    signIn:
+                      description: |-
+                        SignIn is how the agent signs in to the server: none, shared_key,
+                        per_person or obo (through the organization's identity provider).
+                        Empty keeps the behavior of a link made before the choice existed.
+                      enum:
+                      - none
+                      - shared_key
+                      - per_person
+                      - obo
+                      type: string
+                    tools:
+                      additionalProperties:
+                        description: AIAgentMCPTool configures one tool of an MCP
+                          server for an agent.
+                        properties:
+                          autoApproved:
+                            description: AutoApproved runs the tool without asking
+                              for approval first.
+                            type: boolean
+                          enabled:
+                            description: Enabled lets the agent call the tool.
+                            type: boolean
+                        type: object
+                      description: |-
+                        Tools configures the server's tools by name. A tool left out is
+                        disabled.
+                      type: object
+                  required:
+                  - name
+                  type: object
+                type: array
+              skillRefs:
+                description: |-
+                  SkillRefs are Skills of the environment's or the organization's
+                  library the agent uses, in this order. They are shared, so a Skill
+                  left out is only unlinked. Applying a list replaces the whole list,
+                  and skillRefs: [] unlinks them all; when skillRefs is omitted, the
+                  agent's links are left as they are. No name may be both a skillRef and
+                  one of the agent's own Skills.
+                items:
+                  description: AIAgentSkillRef refers to a Skill of a library.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the Skill's name: the metadata.name of a Skill, for the
+                        environment's library.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                      type: string
+                    scope:
+                      description: 'Scope is the library: environment (the default)
+                        or organization.'
+                      enum:
+                      - environment
+                      - organization
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              skills:
+                description: |-
+                  Skills are guidance the agent uses, in this order. They belong to the
+                  agent: applying a list replaces the whole list, so a Skill left out is
+                  deleted, and an empty list removes them all. When skills is omitted,
+                  the agent's Skills are left as they are, so applying an older manifest
+                  does not delete the ones added in the dashboard.
+                items:
+                  description: |-
+                    AIAgentSkill is guidance an AI Agent uses, following the Agent Skills spec.
+                    The agent sees its name and description, and reads the content when a task
+                    needs it, unless it is always included.
+                  properties:
+                    alwaysInclude:
+                      description: |-
+                        AlwaysInclude puts the content in every prompt instead of having the
+                        agent read it on demand.
+                      type: boolean
+                    content:
+                      description: Content is the guidance itself. Required unless
+                        skillFrom is set.
+                      type: string
+                    description:
+                      description: |-
+                        Description says what the Skill does and when to use it. Required
+                        unless skillFrom is set.
+                      type: string
+                    metadata:
+                      additionalProperties:
+                        type: string
+                      description: Metadata is extra Agent Skills spec metadata.
+                      type: object
+                    name:
+                      description: |-
+                        Name identifies the Skill within the agent: up to 64 lowercase
+                        letters, digits and single hyphens.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+                      type: string
+                    skillFrom:
+                      description: |-
+                        SkillFrom reads the description, metadata and content from a SKILL.md
+                        kept in a ConfigMap. The SKILL.md's name must be the Skill's name. Only a
+                        GitOps runner reads it, from its own namespace; testkube apply takes the
+                        Skill inline.
+                      properties:
+                        configMapKeyRef:
+                          description: |-
+                            ConfigMapKeyRef selects the key of a ConfigMap, in the namespace of the
+                            resource, that holds a SKILL.md.
+                          properties:
+                            key:
+                              description: Key holding the SKILL.md, such as SKILL.md.
+                              type: string
+                            name:
+                              description: Name of the ConfigMap.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      type: object
+                  required:
+                  - name
+                  type: object
+                type: array
+            required:
+            - instructions
+            type: object
+          status:
+            description: AIAgentStatus is the Control Plane's view of an AI Agent.
+            properties:
+              a2a:
+                description: A2A is how the agent is reached over A2A, while it is
+                  served.
+                properties:
+                  url:
+                    description: URL is the agent's A2A endpoint.
+                    type: string
+                type: object
+              creationSource:
+                description: 'CreationSource records how the resource was created:
+                  ui, api or gitops.'
+                type: string
+              gitOpsOwner:
+                description: |-
+                  GitOpsOwner is the GitOps agent that owns the resource. While it is set,
+                  the resource is read-only everywhere else.
+                properties:
+                  agentId:
+                    description: AgentID is the authoritative identifier of the owning
+                      agent.
+                    type: string
+                  agentName:
+                    description: AgentName is for display only, and may be stale after
+                      a rename.
+                    type: string
+                required:
+                - agentId
+                type: object
+              id:
+                description: ID is the Control Plane's identifier of the resource.
+                type: string
+              lastModificationSource:
+                description: |-
+                  LastModificationSource records how the resource was last changed: ui,
+                  api or gitops.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}
+
+{{- define "testkube-crds.item.ai.testkube.io_llmproviders.yaml" -}}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: llmproviders.ai.testkube.io
+spec:
+  group: ai.testkube.io
+  names:
+    kind: LLMProvider
+    listKind: LLMProviderList
+    plural: llmproviders
+    singular: llmprovider
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.displayName
+      name: Display Name
+      type: string
+    - jsonPath: .spec.provider
+      name: Provider
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          LLMProvider is a model provider an environment brings its own key for.
+          metadata.name is its slug. The key is never part of the manifest: apiKey
+          reads it from an Environment Credential, which stays in the Control Plane.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LLMProviderSpec is how to reach a provider and which of its
+              models to offer.
+            properties:
+              apiKey:
+                description: |-
+                  APIKey reads the provider's key from an Environment Credential, as
+                  {{`{{`}} credential("name") {{`}}`}} and nothing else. Without it the provider has
+                  no key.
+                type: string
+              baseUrl:
+                description: BaseURL overrides the provider's default endpoint.
+                type: string
+              displayName:
+                description: |-
+                  DisplayName is the provider's name in the dashboard. It defaults to
+                  metadata.name.
+                type: string
+              extraHeaders:
+                additionalProperties:
+                  type: string
+                description: |-
+                  ExtraHeaders are sent with every request to the provider. A value may
+                  be a credential, such as an X-Api-Key header; the Control Plane exports
+                  every value as ********, which applied back keeps the stored one.
+                type: object
+              models:
+                description: Models offered from the provider.
+                items:
+                  description: LLMProviderModel is one model offered from a provider.
+                  properties:
+                    contextWindowTokens:
+                      description: ContextWindowTokens is the size of the model's
+                        context window.
+                      minimum: 0
+                      type: integer
+                    extraHeaders:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        ExtraHeaders are sent with requests for this model, under the
+                        provider's rule.
+                      type: object
+                    label:
+                      description: Label is the model's name in the dashboard.
+                      type: string
+                    name:
+                      description: Name is the model's name at the provider, unique
+                        within the provider.
+                      minLength: 1
+                      type: string
+                    queryParams:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        QueryParams are added to requests for this model, under the
+                        provider's rule.
+                      type: object
+                    type:
+                      description: Type of the model, such as chat or embedding.
+                      type: string
+                    url:
+                      description: URL overrides the provider's endpoint for this
+                        model.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              provider:
+                description: Provider is the kind of provider, such as openai, anthropic
+                  or azure.
+                minLength: 1
+                type: string
+              queryParams:
+                additionalProperties:
+                  type: string
+                description: |-
+                  QueryParams are added to every request to the provider, under the same
+                  rule as ExtraHeaders.
+                type: object
+            required:
+            - provider
+            type: object
+          status:
+            description: |-
+              ControlPlaneResourceStatus is the Control Plane's view of a resource. The Control Plane
+              fills it in when it exports a resource, and ignores it when one is applied:
+              ownership is never taken from a request body.
+            properties:
+              creationSource:
+                description: 'CreationSource records how the resource was created:
+                  ui, api or gitops.'
+                type: string
+              gitOpsOwner:
+                description: |-
+                  GitOpsOwner is the GitOps agent that owns the resource. While it is set,
+                  the resource is read-only everywhere else.
+                properties:
+                  agentId:
+                    description: AgentID is the authoritative identifier of the owning
+                      agent.
+                    type: string
+                  agentName:
+                    description: AgentName is for display only, and may be stale after
+                      a rename.
+                    type: string
+                required:
+                - agentId
+                type: object
+              id:
+                description: ID is the Control Plane's identifier of the resource.
+                type: string
+              lastModificationSource:
+                description: |-
+                  LastModificationSource records how the resource was last changed: ui,
+                  api or gitops.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}
+
+{{- define "testkube-crds.item.ai.testkube.io_mcpservers.yaml" -}}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: mcpservers.ai.testkube.io
+spec:
+  group: ai.testkube.io
+  names:
+    kind: MCPServer
+    listKind: MCPServerList
+    plural: mcpservers
+    singular: mcpserver
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.displayName
+      name: Display Name
+      type: string
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          MCPServer is an MCP server that AI Agents of an environment can use.
+          metadata.name is its slug, which AI Agents refer to it by. How an agent
+          signs in to the server is set on the agent's link to it, not here.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: MCPServerSpec is how to reach an MCP server.
+            properties:
+              args:
+                description: Args of the command, for stdio.
+                items:
+                  type: string
+                type: array
+              command:
+                description: Command to run, required for stdio.
+                type: string
+              description:
+                description: Description of the server.
+                type: string
+              displayName:
+                description: |-
+                  DisplayName is the server's name in the dashboard. It defaults to
+                  metadata.name, and is unique within the environment.
+                type: string
+              type:
+                description: Type of connection. It defaults to http.
+                enum:
+                - http
+                - sse
+                - stdio
+                type: string
+              url:
+                description: |-
+                  URL of the endpoint. The Control Plane requires one for every type,
+                  and checks it is a public HTTPS address unless the host is trusted.
+                type: string
+            type: object
+          status:
+            description: MCPServerStatus is the Control Plane's view of an MCP server.
+            properties:
+              connection:
+                description: |-
+                  Connection is the result of the last connection: unknown, active or
+                  error.
+                type: string
+              creationSource:
+                description: 'CreationSource records how the resource was created:
+                  ui, api or gitops.'
+                type: string
+              gitOpsOwner:
+                description: |-
+                  GitOpsOwner is the GitOps agent that owns the resource. While it is set,
+                  the resource is read-only everywhere else.
+                properties:
+                  agentId:
+                    description: AgentID is the authoritative identifier of the owning
+                      agent.
+                    type: string
+                  agentName:
+                    description: AgentName is for display only, and may be stale after
+                      a rename.
+                    type: string
+                required:
+                - agentId
+                type: object
+              id:
+                description: ID is the Control Plane's identifier of the resource.
+                type: string
+              lastConnectedAt:
+                description: LastConnectedAt is when the server was last reached.
+                format: date-time
+                type: string
+              lastError:
+                description: LastError is the error of the last failed connection.
+                type: string
+              lastModificationSource:
+                description: |-
+                  LastModificationSource records how the resource was last changed: ui,
+                  api or gitops.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}
+
+{{- define "testkube-crds.item.ai.testkube.io_skills.yaml" -}}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: skills.ai.testkube.io
+spec:
+  group: ai.testkube.io
+  names:
+    kind: Skill
+    listKind: SkillList
+    plural: skills
+    singular: skill
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Skill is a Skill of an environment's library, following the Agent Skills
+          spec (https://agentskills.io/specification). metadata.name is the Skill's
+          name, and spec follows the SKILL.md frontmatter key for key, with content as
+          its Markdown body. AI Agents use it through skillRefs.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              SkillSpec is a Skill, written inline or read from a SKILL.md with
+              skillFrom. With skillFrom, the SKILL.md gives every field but testkube.
+            properties:
+              allowed-tools:
+                description: |-
+                  AllowedTools are the tools the Skill may run without asking, space
+                  separated, as in a SKILL.md.
+                type: string
+              compatibility:
+                description: |-
+                  Compatibility says what environment the Skill needs: up to 500
+                  characters.
+                type: string
+              content:
+                description: |-
+                  Content is the guidance itself, the Markdown body of a SKILL.md: up to
+                  32000 characters. Required unless skillFrom is set.
+                type: string
+              description:
+                description: |-
+                  Description says what the Skill does and when to use it: up to 1024
+                  characters. Required unless skillFrom is set.
+                type: string
+              license:
+                description: License is the Skill's license name, or a reference to
+                  a license file.
+                type: string
+              metadata:
+                additionalProperties:
+                  type: string
+                description: Metadata is extra Agent Skills spec metadata.
+                type: object
+              skillFrom:
+                description: |-
+                  SkillFrom reads the whole Skill, frontmatter and body, from a SKILL.md
+                  kept in a ConfigMap, instead of the fields above. Only a GitOps runner
+                  reads it, from its own namespace; testkube apply takes the Skill inline.
+                properties:
+                  configMapKeyRef:
+                    description: |-
+                      ConfigMapKeyRef selects the key of a ConfigMap, in the namespace of the
+                      resource, that holds a SKILL.md.
+                    properties:
+                      key:
+                        description: Key holding the SKILL.md, such as SKILL.md.
+                        type: string
+                      name:
+                        description: Name of the ConfigMap.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                type: object
+              testkube:
+                description: |-
+                  Testkube holds the settings that are Testkube's own rather than the
+                  Agent Skills spec's.
+                properties:
+                  addToNewTestBundles:
+                    description: AddToNewTestBundles adds the Skill to every Test
+                      Bundle created after it.
+                    type: boolean
+                  alwaysInclude:
+                    description: |-
+                      AlwaysInclude puts the content in every prompt instead of having the
+                      agent read it on demand.
+                    type: boolean
+                type: object
+            type: object
+          status:
+            description: |-
+              ControlPlaneResourceStatus is the Control Plane's view of a resource. The Control Plane
+              fills it in when it exports a resource, and ignores it when one is applied:
+              ownership is never taken from a request body.
+            properties:
+              creationSource:
+                description: 'CreationSource records how the resource was created:
+                  ui, api or gitops.'
+                type: string
+              gitOpsOwner:
+                description: |-
+                  GitOpsOwner is the GitOps agent that owns the resource. While it is set,
+                  the resource is read-only everywhere else.
+                properties:
+                  agentId:
+                    description: AgentID is the authoritative identifier of the owning
+                      agent.
+                    type: string
+                  agentName:
+                    description: AgentName is for display only, and may be stale after
+                      a rename.
+                    type: string
+                required:
+                - agentId
+                type: object
+              id:
+                description: ID is the Control Plane's identifier of the resource.
+                type: string
+              lastModificationSource:
+                description: |-
+                  LastModificationSource records how the resource was last changed: ui,
+                  api or gitops.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
 {{- end }}
 
 {{- define "testkube-crds.item.executor.testkube.io_executors.yaml" -}}
@@ -8597,6 +9405,27 @@ spec:
                   description: steps to run at the end of the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -9799,6 +10628,27 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -11603,8 +12453,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -11654,6 +12513,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -11749,6 +12636,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -12962,6 +13852,30 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    retry:
+                      description: |-
+                        Retry reruns the whole workflow when the execution ends for a cause the policy lists.
+                        It is not the step-level retry: that one reruns a step inside the same pod.
+                      properties:
+                        count:
+                          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
+                          format: int32
+                          maximum: 10
+                          minimum: 1
+                          type: integer
+                        "on":
+                          description: 'the causes that are retried (defaults to: infrastructure)'
+                          items:
+                            description: ExecutionRetryCause is a class of failure that an execution retry may answer.
+                            enum:
+                              - infrastructure
+                              - timeout
+                              - oom
+                            type: string
+                          type: array
+                      required:
+                        - count
+                      type: object
                     silent:
                       description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
                       type: boolean
@@ -13081,8 +13995,17 @@ spec:
                           - ip
                         type: object
                       type: array
+                    hostIPC:
+                      description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
+                    hostNetwork:
+                      description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
+                      type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                       type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
@@ -13132,6 +14055,34 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -13227,6 +14178,9 @@ spec:
                     serviceAccountName:
                       description: default service account name for the scheduled pod
                       type: string
+                    setHostnameAsFQDN:
+                      description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                      type: boolean
                     subdomain:
                       description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                       type: string
@@ -13941,8 +14895,17 @@ spec:
                                 - ip
                               type: object
                             type: array
+                          hostIPC:
+                            description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
+                          hostNetwork:
+                            description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
+                            type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                             type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
@@ -13992,6 +14955,34 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -14087,6 +15078,9 @@ spec:
                           serviceAccountName:
                             description: default service account name for the scheduled pod
                             type: string
+                          setHostnameAsFQDN:
+                            description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                            type: boolean
                           subdomain:
                             description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                             type: string
@@ -14451,6 +15445,27 @@ spec:
                   description: steps for setting up the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -15653,6 +16668,27 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -17457,8 +18493,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -17508,6 +18553,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -17603,6 +18676,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -18021,6 +19097,27 @@ spec:
                   description: steps to execute in the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -19223,6 +20320,27 @@ spec:
                           after:
                             description: steps to run at the end of the workflow
                             x-kubernetes-preserve-unknown-fields: true
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -21027,8 +22145,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -21078,6 +22205,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -21173,6 +22328,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -21913,6 +23071,27 @@ spec:
                   description: steps to run at the end of the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -23112,6 +24291,27 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -24854,8 +26054,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -24905,6 +26114,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -25000,6 +26237,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -26156,6 +27396,30 @@ spec:
                 execution:
                   description: values to be used for test workflow execution
                   properties:
+                    retry:
+                      description: |-
+                        Retry reruns the whole workflow when the execution ends for a cause the policy lists.
+                        It is not the step-level retry: that one reruns a step inside the same pod.
+                      properties:
+                        count:
+                          description: how many automatic retries follow a run that a person started or a schedule triggered; a manual rerun starts a new budget
+                          format: int32
+                          maximum: 10
+                          minimum: 1
+                          type: integer
+                        "on":
+                          description: 'the causes that are retried (defaults to: infrastructure)'
+                          items:
+                            description: ExecutionRetryCause is a class of failure that an execution retry may answer.
+                            enum:
+                              - infrastructure
+                              - timeout
+                              - oom
+                            type: string
+                          type: array
+                      required:
+                        - count
+                      type: object
                     silent:
                       description: When true, SilentMode is activated for all executions (Webhooks, Insights, Health, Metrics, Cdevents all set to true).
                       type: boolean
@@ -26275,8 +27539,17 @@ spec:
                           - ip
                         type: object
                       type: array
+                    hostIPC:
+                      description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
+                    hostNetwork:
+                      description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                      type: boolean
                     hostPID:
                       description: Whether to allow a pod to have access to the host process ID namespace
+                      type: boolean
+                    hostUsers:
+                      description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                       type: boolean
                     hostname:
                       description: Specifies the hostname of the Pod
@@ -26326,6 +27599,34 @@ spec:
                           - name
                         type: object
                       type: array
+                    resources:
+                      description: |-
+                        Pod-level resource requests and limits, shared by all containers in the pod,
+                        including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource limits for the container
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            x-kubernetes-int-or-string: true
+                          description: resource requests for the container
+                          type: object
+                      type: object
+                    runtimeClassName:
+                      description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                      type: string
+                    schedulerName:
+                      description: If specified, the pod will be dispatched by the specified scheduler.
+                      type: string
                     schedulingGates:
                       items:
                         properties:
@@ -26421,6 +27722,9 @@ spec:
                     serviceAccountName:
                       description: default service account name for the scheduled pod
                       type: string
+                    setHostnameAsFQDN:
+                      description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                      type: boolean
                     subdomain:
                       description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                       type: string
@@ -27135,8 +28439,17 @@ spec:
                                 - ip
                               type: object
                             type: array
+                          hostIPC:
+                            description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
+                          hostNetwork:
+                            description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                            type: boolean
                           hostPID:
                             description: Whether to allow a pod to have access to the host process ID namespace
+                            type: boolean
+                          hostUsers:
+                            description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                             type: boolean
                           hostname:
                             description: Specifies the hostname of the Pod
@@ -27186,6 +28499,34 @@ spec:
                                 - name
                               type: object
                             type: array
+                          resources:
+                            description: |-
+                              Pod-level resource requests and limits, shared by all containers in the pod,
+                              including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource limits for the container
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description: resource requests for the container
+                                type: object
+                            type: object
+                          runtimeClassName:
+                            description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                            type: string
+                          schedulerName:
+                            description: If specified, the pod will be dispatched by the specified scheduler.
+                            type: string
                           schedulingGates:
                             items:
                               properties:
@@ -27281,6 +28622,9 @@ spec:
                           serviceAccountName:
                             description: default service account name for the scheduled pod
                             type: string
+                          setHostnameAsFQDN:
+                            description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                            type: boolean
                           subdomain:
                             description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                             type: string
@@ -27625,6 +28969,27 @@ spec:
                   description: steps for setting up the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -28824,6 +30189,27 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -30566,8 +31952,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -30617,6 +32012,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -30712,6 +32135,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string
@@ -31073,6 +32499,27 @@ spec:
                   description: steps to execute in the workflow
                   items:
                     properties:
+                      agent:
+                        description: run an AI Agent of the environment
+                        properties:
+                          model:
+                            description: model for the turn; when empty, the AI Agent uses its default model
+                            type: string
+                          name:
+                            description: name of the AI Agent
+                            minLength: 1
+                            type: string
+                          prompt:
+                            description: message for the AI Agent
+                            type: string
+                          thinking:
+                            description: |-
+                              reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                              when empty, the AI Agent uses its default effort
+                            type: string
+                        required:
+                          - name
+                        type: object
                       artifacts:
                         description: scrape artifacts from the volumes
                         properties:
@@ -32272,6 +33719,27 @@ spec:
                       parallel:
                         description: instructions for parallel execution
                         properties:
+                          agent:
+                            description: run an AI Agent of the environment
+                            properties:
+                              model:
+                                description: model for the turn; when empty, the AI Agent uses its default model
+                                type: string
+                              name:
+                                description: name of the AI Agent
+                                minLength: 1
+                                type: string
+                              prompt:
+                                description: message for the AI Agent
+                                type: string
+                              thinking:
+                                description: |-
+                                  reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
+                                  when empty, the AI Agent uses its default effort
+                                type: string
+                            required:
+                              - name
+                            type: object
                           artifacts:
                             description: scrape artifacts from the volumes
                             properties:
@@ -34014,8 +35482,17 @@ spec:
                                       - ip
                                     type: object
                                   type: array
+                                hostIPC:
+                                  description: Use the host's IPC namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
+                                hostNetwork:
+                                  description: Use the host's network namespace. Like hostPID, it is only allowed when low security fields are enabled.
+                                  type: boolean
                                 hostPID:
                                   description: Whether to allow a pod to have access to the host process ID namespace
+                                  type: boolean
+                                hostUsers:
+                                  description: Use the host's user namespace. Set to false to run the pod in its own user namespace.
                                   type: boolean
                                 hostname:
                                   description: Specifies the hostname of the Pod
@@ -34065,6 +35542,34 @@ spec:
                                       - name
                                     type: object
                                   type: array
+                                resources:
+                                  description: |-
+                                    Pod-level resource requests and limits, shared by all containers in the pod,
+                                    including the ones Testkube adds. Requires Kubernetes 1.34+ (PodLevelResources).
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource limits for the container
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                          - type: integer
+                                          - type: string
+                                        x-kubernetes-int-or-string: true
+                                      description: resource requests for the container
+                                      type: object
+                                  type: object
+                                runtimeClassName:
+                                  description: RuntimeClassName refers to a RuntimeClass object to run the pod with, for example a sandboxed runtime.
+                                  type: string
+                                schedulerName:
+                                  description: If specified, the pod will be dispatched by the specified scheduler.
+                                  type: string
                                 schedulingGates:
                                   items:
                                     properties:
@@ -34160,6 +35665,9 @@ spec:
                                 serviceAccountName:
                                   description: default service account name for the scheduled pod
                                   type: string
+                                setHostnameAsFQDN:
+                                  description: If true, the pod's hostname is set to its fully qualified domain name, built from hostname and subdomain.
+                                  type: boolean
                                 subdomain:
                                   description: If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
                                   type: string

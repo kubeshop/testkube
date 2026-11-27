@@ -341,6 +341,12 @@ var (
 			NodeSelector:       map[string]string{"some-key-3": "some-value"},
 			Labels:             map[string]string{"some-key-4": "some-value"},
 			Annotations:        map[string]string{"some-key=5": "some-value-2"},
+			RuntimeClassName:   common.Ptr("gvisor"),
+			SchedulerName:      "volcano",
+			HostUsers:          common.Ptr(false),
+			HostNetwork:        common.Ptr(true),
+			HostIPC:            common.Ptr(true),
+			SetHostnameAsFQDN:  common.Ptr(true),
 		},
 		Events: []testworkflowsv1.Event{
 			{
@@ -353,7 +359,8 @@ var (
 			},
 		},
 		Execution: &testworkflowsv1.TestWorkflowExecutionSchema{
-			Tags: map[string]string{"some-key": "some-value"},
+			Tags:  map[string]string{"some-key": "some-value"},
+			Retry: &testworkflowsv1.ExecutionRetryPolicy{Count: 2, On: []testworkflowsv1.ExecutionRetryCause{testworkflowsv1.ExecutionRetryCauseInfrastructure, testworkflowsv1.ExecutionRetryCauseOOM}},
 		},
 		Timeouts: &testworkflowsv1.TestWorkflowTimeouts{
 			Queue:          "30s",
@@ -551,6 +558,92 @@ func TestMapStepParallelRoundTripsParallelism(t *testing.T) {
 			independentAPI := MapIndependentStepParallelKubeToAPI(testworkflowsv1.IndependentStepParallel{Parallelism: tc.kube})
 			assert.Equal(t, tc.api, independentAPI.Parallelism)
 			assert.Equal(t, tc.kube, MapIndependentStepParallelAPIToKube(independentAPI).Parallelism)
+		})
+	}
+}
+
+func TestMapPodConfigResourcesRoundTrip(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources *testworkflowsv1.Resources
+	}{
+		{
+			name: "keeps cpu and memory",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "200m", corev1.ResourceMemory: "256Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{corev1.ResourceCPU: "1", corev1.ResourceMemory: "512Mi"},
+			},
+		},
+		{
+			name: "keeps hugepages",
+			resources: &testworkflowsv1.Resources{
+				Requests: map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "64Mi"},
+				Limits:   map[corev1.ResourceName]testworkflowsv1.ConfigValue{"hugepages-2Mi": "128Mi", "hugepages-1Gi": "{{config.pages}}"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := testworkflowsv1.PodConfig{Resources: tt.resources}
+
+			assert.Equal(t, v, MapPodConfigAPIToKube(MapPodConfigKubeToAPI(v)))
+		})
+	}
+}
+
+func TestMapStepAgentRoundTrips(t *testing.T) {
+	agent := &testworkflowsv1.StepAgent{
+		Name:     "failure-triage",
+		Prompt:   "Find the cause in {{ execution.id }}.",
+		Model:    "{{ config.model }}",
+		Thinking: "high",
+	}
+	operations := testworkflowsv1.StepOperations{Agent: agent}
+
+	tests := []struct {
+		name      string
+		roundTrip func() *testworkflowsv1.StepAgent
+		want      *testworkflowsv1.StepAgent
+	}{
+		{
+			name: "step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapStepAPIToKube(MapStepKubeToAPI(testworkflowsv1.Step{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "independent step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapIndependentStepAPIToKube(MapIndependentStepKubeToAPI(testworkflowsv1.IndependentStep{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "parallel step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapStepParallelAPIToKube(MapStepParallelKubeToAPI(testworkflowsv1.StepParallel{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "independent parallel step",
+			want: agent,
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapIndependentStepParallelAPIToKube(MapIndependentStepParallelKubeToAPI(testworkflowsv1.IndependentStepParallel{StepOperations: operations})).Agent
+			},
+		},
+		{
+			name: "step with no agent",
+			roundTrip: func() *testworkflowsv1.StepAgent {
+				return MapStepAPIToKube(MapStepKubeToAPI(testworkflowsv1.Step{})).Agent
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.roundTrip())
 		})
 	}
 }

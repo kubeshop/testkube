@@ -188,6 +188,17 @@ The * goes first, so the Environment ids of a map still apply to their namespace
 {{- end -}}
 {{- end }}
 
+{{/*
+Whether the GitOps runner syncs the Control Plane resources: "true", or empty. Values reused from a
+release made before gitops.controlPlaneResources existed (helm upgrade --reuse-values) lack it, so
+it is read with a default rather than directly.
+*/}}
+{{- define "testkube-runner.gitops.controlPlaneResources" -}}
+{{- if and .Values.gitops.enabled (get (default dict .Values.gitops.controlPlaneResources) "enabled") -}}
+true
+{{- end -}}
+{{- end }}
+
 {{- define "testkube-runner.listener.watchers.rules" -}}
 rules:
   - apiGroups:
@@ -248,6 +259,30 @@ rules:
       - get
       - list
       - watch
+  {{- if include "testkube-runner.gitops.controlPlaneResources" . }}
+  # Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Skills),
+  # which the GitOps runner syncs to the Control Plane. It only reads them, and the ConfigMaps
+  # above that a Skill's skillFrom reads its SKILL.md from.
+  - apiGroups:
+      - "insights.testkube.io"
+    resources:
+      - boards
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "ai.testkube.io"
+    resources:
+      - aiagents
+      - mcpservers
+      - llmproviders
+      - skills
+    verbs:
+      - get
+      - list
+      - watch
+  {{- end }}
   {{- with .Values.listener.extraWatchedResources }}
   # User-declared GVKs for TestTrigger / WorkflowTrigger `resourceRef` targets
   # that aren't covered by the built-in resource list above.

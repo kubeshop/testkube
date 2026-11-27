@@ -92,7 +92,7 @@ var RootCmd = &cobra.Command{
 		ui.SetVerbose(verbose)
 
 		// don't validate context before set and completion
-		if cmd.Name() == "context" || (cmd.Parent() != nil && cmd.Parent().Name() == "completion") {
+		if cmd.Name() == "context" || (cmd.Parent() != nil && cmd.Parent().Name() == "completion") || isCompletionRequest(cmd) {
 			return
 		}
 
@@ -110,6 +110,11 @@ var RootCmd = &cobra.Command{
 	},
 
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		// a tab press must stay quiet: no login, no telemetry, no update hint
+		if isCompletionRequest(cmd) {
+			return
+		}
+
 		clientCfg, err := config.Load()
 		ui.WarnOnError("loading config", err)
 
@@ -162,6 +167,12 @@ var RootCmd = &cobra.Command{
 		ui.PrintOnError("Displaying usage", err)
 		cmd.DisableAutoGenTag = true
 	},
+}
+
+// isCompletionRequest reports whether cmd is the hidden command the shell
+// completion scripts call on every tab press.
+func isCompletionRequest(cmd *cobra.Command) bool {
+	return cmd.Name() == cobra.ShellCompRequestCmd || cmd.CalledAs() == cobra.ShellCompNoDescRequestCmd
 }
 
 // isPreRunTelemetry determines if telemetry should be sent in PreRun for this command

@@ -108,6 +108,12 @@ gitops:
   namespaces:
   ## Sync every namespace of the cluster; needs a ClusterRole
   watchAllNamespaces: false
+  controlPlaneResources:
+    ## Also sync the Control Plane resources: Insights Boards, MCP servers, LLM providers, Skills and
+    ## AI Agents. Needs gitops.enabled. It grants the runner read access to their custom resources
+    ## (installed with installCRD). A Control Plane that does not serve a kind is not sent it, and
+    ## the runner skips it.
+    enabled: false
 
 execution:
   default:

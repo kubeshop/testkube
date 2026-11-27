@@ -572,6 +572,25 @@ func MapResourcesKubeToAPI(v testworkflowsv1.Resources) testkube.TestWorkflowRes
 	}
 }
 
+// MapPodResourcesListKubeToAPI keeps every resource name, such as hugepages-2Mi, not only the fixed keys of a container.
+func MapPodResourcesListKubeToAPI(v map[corev1.ResourceName]testworkflowsv1.ConfigValue) map[string]string {
+	if len(v) == 0 {
+		return nil
+	}
+	res := make(map[string]string, len(v))
+	for name, value := range v {
+		res[string(name)] = value.String()
+	}
+	return res
+}
+
+func MapPodResourcesKubeToAPI(v testworkflowsv1.Resources) testkube.TestWorkflowPodResources {
+	return testkube.TestWorkflowPodResources{
+		Limits:   MapPodResourcesListKubeToAPI(v.Limits),
+		Requests: MapPodResourcesListKubeToAPI(v.Requests),
+	}
+}
+
 func MapJobConfigKubeToAPI(v testworkflowsv1.JobConfig) testkube.TestWorkflowJobConfig {
 	return testkube.TestWorkflowJobConfig{
 		Labels:                v.Labels,
@@ -828,6 +847,9 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		Tolerations:               common.MapSlice(v.Tolerations, MapTolerationKubeToAPI),
 		HostAliases:               common.MapSlice(v.HostAliases, MapHostAliasKubeToAPI),
 		PriorityClassName:         v.PriorityClassName,
+		RuntimeClassName:          MapStringToBoxedString(v.RuntimeClassName),
+		SchedulerName:             v.SchedulerName,
+		HostUsers:                 MapBoolToBoxedBoolean(v.HostUsers),
 		Priority:                  MapInt32ToBoxedInteger(v.Priority),
 		DnsConfig:                 common.MapPtr(v.DNSConfig, MapPodDNSConfigKubeToAPI),
 		PreemptionPolicy:          MapStringToBoxedString(common.MapPtr(v.PreemptionPolicy, common.MapEnumToString[corev1.PreemptionPolicy])),
@@ -835,6 +857,10 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
 		HostPID:                   MapBoolToBoxedBoolean(v.HostPID),
+		HostNetwork:               MapBoolToBoxedBoolean(v.HostNetwork),
+		HostIPC:                   MapBoolToBoxedBoolean(v.HostIPC),
+		SetHostnameAsFQDN:         MapBoolToBoxedBoolean(v.SetHostnameAsFQDN),
+		Resources:                 common.MapPtr(v.Resources, MapPodResourcesKubeToAPI),
 	}
 }
 
@@ -1037,6 +1063,15 @@ func MapStepExecuteKubeToAPI(v testworkflowsv1.StepExecute) testkube.TestWorkflo
 	}
 }
 
+func MapStepAgentKubeToAPI(v testworkflowsv1.StepAgent) testkube.TestWorkflowStepAgent {
+	return testkube.TestWorkflowStepAgent{
+		Name:     v.Name,
+		Prompt:   v.Prompt,
+		Model:    v.Model,
+		Thinking: v.Thinking,
+	}
+}
+
 func MapStepArtifactsCompressionKubeToAPI(v testworkflowsv1.ArtifactCompression) testkube.TestWorkflowStepArtifactsCompression {
 	return testkube.TestWorkflowStepArtifactsCompression{
 		Name: v.Name,
@@ -1119,6 +1154,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Shell:       v.Shell,
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:       common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
@@ -1156,6 +1192,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Shell:       v.Shell,
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:       common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:       common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
@@ -1294,6 +1331,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		WorkingDir: MapStringToBoxedString(v.WorkingDir),
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:      common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapStepKubeToAPI),
@@ -1321,6 +1359,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		WorkingDir: MapStringToBoxedString(v.WorkingDir),
 		Container:  common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Execute:    common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
+		Agent:      common.MapPtr(v.Agent, MapStepAgentKubeToAPI),
 		Artifacts:  common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
 		Cache:      common.MapPtr(v.Cache, MapStepCacheKubeToAPI),
 		Setup:      common.MapSlice(v.Setup, MapIndependentStepKubeToAPI),
@@ -1455,6 +1494,14 @@ func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowExecutionSc
 		Tags:   v.Tags,
 		Target: common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 		Silent: common.ResolvePtr(v.Silent, false),
+		Retry:  common.MapPtr(v.Retry, MapExecutionRetryPolicyKubeToAPI),
+	}
+}
+
+func MapExecutionRetryPolicyKubeToAPI(v testworkflowsv1.ExecutionRetryPolicy) testkube.TestWorkflowExecutionRetryPolicy {
+	return testkube.TestWorkflowExecutionRetryPolicy{
+		Count: v.Count,
+		On:    common.MapSlice(v.On, func(c testworkflowsv1.ExecutionRetryCause) string { return string(c) }),
 	}
 }
 

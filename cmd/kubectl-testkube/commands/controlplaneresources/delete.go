@@ -27,7 +27,7 @@ func newDeleteCmd(kind declarative.Kind, newClient ClientFactory) *cobra.Command
 	return &cobra.Command{
 		Use:     kind.Name() + " <name>",
 		Aliases: kind.Names[1:],
-		Short:   fmt.Sprintf("Delete a %s from the Control Plane", kind.Kind),
+		Short:   fmt.Sprintf("Delete %s resources from the Control Plane", kind.Kind),
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			ignoreNotFound := false

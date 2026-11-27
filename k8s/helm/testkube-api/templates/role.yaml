@@ -458,6 +458,53 @@ rules:
       - get
 
 ---
+{{- if and .Values.next.gitops.syncKubernetesToCloud .Values.next.gitops.syncControlPlaneResources }}
+
+# Control Plane resources (Insights Boards, AI Agents, MCP servers, LLM providers and Skills),
+# which a GitOps runner syncs to the Control Plane. It only reads them, and the ConfigMaps a
+# Skill's skillFrom reads its SKILL.md from.
+apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
+kind: Role
+metadata:
+  name: controlplaneresources-role-{{ .Release.Name }}
+  labels: {{- include "testkube-api.labels" . | nindent 4 }}
+    {{- if .Values.global.labels }}
+    {{- include "global.tplvalues.render" ( dict "value" .Values.global.labels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.annotations}}
+  annotations: {{- include "global.tplvalues.render" ( dict "value" .Values.global.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+rules:
+  - apiGroups:
+      - insights.testkube.io
+    resources:
+      - boards
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ai.testkube.io
+    resources:
+      - aiagents
+      - mcpservers
+      - llmproviders
+      - skills
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}
+
+---
 {{- if .Values.next.testTriggers.enabled }}
 
 apiVersion: {{ include "global.capabilities.rbac.apiVersion" . }}
@@ -1057,6 +1104,14 @@ rules:
     - ""
     resources:
     - pods/log
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - ""
+    resources:
+    - events
     verbs:
     - get
     - watch

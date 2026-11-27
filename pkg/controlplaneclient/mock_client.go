@@ -58,6 +58,21 @@ func (mr *MockClientMockRecorder) AppendExecutionReport(ctx, environmentId, exec
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendExecutionReport", reflect.TypeOf((*MockClient)(nil).AppendExecutionReport), ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report)
 }
 
+// CancelAgentTurn mocks base method.
+func (m *MockClient) CancelAgentTurn(ctx context.Context, turnId string) (*cloud.AgentTurn, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelAgentTurn", ctx, turnId)
+	ret0, _ := ret[0].(*cloud.AgentTurn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CancelAgentTurn indicates an expected call of CancelAgentTurn.
+func (mr *MockClientMockRecorder) CancelAgentTurn(ctx, turnId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelAgentTurn", reflect.TypeOf((*MockClient)(nil).CancelAgentTurn), ctx, turnId)
+}
+
 // CreateTestTrigger mocks base method.
 func (m *MockClient) CreateTestTrigger(ctx context.Context, environmentId string, trigger testkube.TestTrigger) error {
 	m.ctrl.T.Helper()
@@ -272,6 +287,21 @@ func (m *MockClient) FinishExecutionResult(ctx context.Context, environmentId, e
 func (mr *MockClientMockRecorder) FinishExecutionResult(ctx, environmentId, executionId, result any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinishExecutionResult", reflect.TypeOf((*MockClient)(nil).FinishExecutionResult), ctx, environmentId, executionId, result)
+}
+
+// GetAgentTurn mocks base method.
+func (m *MockClient) GetAgentTurn(ctx context.Context, turnId string, after uint32) (*cloud.AgentTurn, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAgentTurn", ctx, turnId, after)
+	ret0, _ := ret[0].(*cloud.AgentTurn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAgentTurn indicates an expected call of GetAgentTurn.
+func (mr *MockClientMockRecorder) GetAgentTurn(ctx, turnId, after any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentTurn", reflect.TypeOf((*MockClient)(nil).GetAgentTurn), ctx, turnId, after)
 }
 
 // GetCredential mocks base method.
@@ -710,6 +740,21 @@ func (m *MockClient) ScheduleExecution(ctx context.Context, environmentId string
 func (mr *MockClientMockRecorder) ScheduleExecution(ctx, environmentId, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScheduleExecution", reflect.TypeOf((*MockClient)(nil).ScheduleExecution), ctx, environmentId, request)
+}
+
+// StartAgentTurn mocks base method.
+func (m *MockClient) StartAgentTurn(ctx context.Context, req *cloud.StartAgentTurnRequest) (*cloud.AgentTurn, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartAgentTurn", ctx, req)
+	ret0, _ := ret[0].(*cloud.AgentTurn)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartAgentTurn indicates an expected call of StartAgentTurn.
+func (mr *MockClientMockRecorder) StartAgentTurn(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAgentTurn", reflect.TypeOf((*MockClient)(nil).StartAgentTurn), ctx, req)
 }
 
 // UpdateExecutionOutput mocks base method.

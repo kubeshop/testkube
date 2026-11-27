@@ -27,11 +27,12 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "testworkflowexecution [executionID]",
-		Aliases: []string{"testworkflowexecutions", "twe", "tw-execution", "twexecution"},
-		Args:    cobra.MaximumNArgs(1),
-		Short:   "Gets TestWorkflow execution details",
-		Long:    `Gets TestWorkflow execution details by ID, or list if id is not passed`,
+		Use:               "testworkflowexecution [executionID]",
+		ValidArgsFunction: common.CompleteTestWorkflowExecutionNames,
+		Aliases:           []string{"testworkflowexecutions", "twe", "tw-execution", "twexecution"},
+		Args:              cobra.MaximumNArgs(1),
+		Short:             "Gets TestWorkflow execution details",
+		Long:              `Gets TestWorkflow execution details by ID, or list if id is not passed`,
 
 		Run: func(cmd *cobra.Command, args []string) {
 			outputFlag := cmd.Flag("output")
@@ -97,6 +98,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&testWorkflowName, "testworkflow", "w", "", "test workflow name")
+	_ = cmd.RegisterFlagCompletionFunc("testworkflow", common.CompleteTestWorkflowNameFlag)
 	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
