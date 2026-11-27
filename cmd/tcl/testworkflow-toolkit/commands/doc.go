@@ -56,6 +56,10 @@
 //     control plane refuses it, the command writes the default of each output that has one. A
 //     condition on an output that does not exist aborts the execution, and with a default it
 //     reads a known value, such as "no-go". An output with no default has no value then.
+//     So a default is the value for "the AI Agent said nothing", and a later step acts on it.
+//     It must be the value that is safe to act on: "no-go" for a gate, "unknown" for a category.
+//     The command prints a warning with the defaults that it used, because in an expression a
+//     default looks the same as a value from the AI Agent.
 //   - The command fails before the first call for an output name that the init process does
 //     not read as a file, and for a default that its schema refuses. The processor refuses
 //     the same names when it processes the workflow.

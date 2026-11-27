@@ -168,6 +168,7 @@ func TestAgentStep_Run(t *testing.T) {
 			outputs:     map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
 			start:       agentReply{err: status.Error(codes.ResourceExhausted, "the execution started 20 turns")},
 			wantErr:     "cannot start the AI Agent",
+			wantLog:     []string{"warn: the AI Agent gave no valid outputs, so the step uses the defaults: verdict=no-go\n"},
 			wantOutputs: map[string]string{"verdict": "no-go"},
 		},
 		{

@@ -18,6 +18,6 @@ type TestWorkflowStepAgent struct {
 	Model string `json:"model,omitempty"`
 	// reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max; when empty, the AI Agent uses its default effort
 	Thinking string `json:"thinking,omitempty"`
-	// values that the AI Agent must give with its answer; the step checks each value against its schema and publishes it as a step output
+	// values that the AI Agent must give with its answer; the step checks each value against its schema and publishes it as a step output. The default of a value also applies when the turn fails, so it must be a value that is safe for a later step to act on
 	Outputs map[string]TestWorkflowParameterSchema `json:"outputs,omitempty"`
 }

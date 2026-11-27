@@ -33,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/grpcutils"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/agentoutputs"
 )
 
 // agentSubject names the agent step in an error of its definition.
@@ -121,8 +122,19 @@ type agentStep struct {
 func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) error {
 	err := s.runTurn(ctx, spec)
 	if err != nil {
-		if writeErr := s.writeOutputs(agentOutputDefaults(spec.Outputs)); writeErr != nil {
+		defaults := agentOutputDefaults(spec.Outputs)
+		if writeErr := s.writeOutputs(defaults); writeErr != nil {
 			s.printf("warn: cannot write the default outputs: %s\n", writeErr.Error())
+		} else if len(defaults) > 0 {
+			// A default here is not a value from the AI Agent, and a later step acts on it. The
+			// log says so, because the value looks the same as a real one in an expression.
+			names := make([]string, 0, len(defaults))
+			for _, name := range agentoutputs.Names(spec.Outputs) {
+				if value, ok := defaults[name]; ok {
+					names = append(names, name+"="+value)
+				}
+			}
+			s.printf("warn: the AI Agent gave no valid outputs, so the step uses the defaults: %s\n", strings.Join(names, ", "))
 		}
 	}
 	return err

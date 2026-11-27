@@ -10249,7 +10249,7 @@ components:
           description: "reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max; when empty, the AI Agent uses its default effort"
         outputs:
           type: object
-          description: values that the AI Agent must give with its answer; the step checks each value against its schema and publishes it as a step output
+          description: values that the AI Agent must give with its answer; the step checks each value against its schema and publishes it as a step output. The default of a value also applies when the turn fails, so it must be a value that is safe for a later step to act on
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowParameterSchema"
 

@@ -9487,7 +9487,8 @@ spec:
                               type: object
                             description: |-
                               values that the AI Agent must give with its answer; the step checks each value against
-                              its schema and publishes it as a step output
+                              its schema and publishes it as a step output. The default of a value also applies when
+                              the turn fails, so it must be a value that is safe for a later step to act on
                             type: object
                           prompt:
                             description: message for the AI Agent
@@ -10784,7 +10785,8 @@ spec:
                                   type: object
                                 description: |-
                                   values that the AI Agent must give with its answer; the step checks each value against
-                                  its schema and publishes it as a step output
+                                  its schema and publishes it as a step output. The default of a value also applies when
+                                  the turn fails, so it must be a value that is safe for a later step to act on
                                 type: object
                               prompt:
                                 description: message for the AI Agent
@@ -15675,7 +15677,8 @@ spec:
                               type: object
                             description: |-
                               values that the AI Agent must give with its answer; the step checks each value against
-                              its schema and publishes it as a step output
+                              its schema and publishes it as a step output. The default of a value also applies when
+                              the turn fails, so it must be a value that is safe for a later step to act on
                             type: object
                           prompt:
                             description: message for the AI Agent
@@ -16972,7 +16975,8 @@ spec:
                                   type: object
                                 description: |-
                                   values that the AI Agent must give with its answer; the step checks each value against
-                                  its schema and publishes it as a step output
+                                  its schema and publishes it as a step output. The default of a value also applies when
+                                  the turn fails, so it must be a value that is safe for a later step to act on
                                 type: object
                               prompt:
                                 description: message for the AI Agent
@@ -19475,7 +19479,8 @@ spec:
                               type: object
                             description: |-
                               values that the AI Agent must give with its answer; the step checks each value against
-                              its schema and publishes it as a step output
+                              its schema and publishes it as a step output. The default of a value also applies when
+                              the turn fails, so it must be a value that is safe for a later step to act on
                             type: object
                           prompt:
                             description: message for the AI Agent
@@ -20772,7 +20777,8 @@ spec:
                                   type: object
                                 description: |-
                                   values that the AI Agent must give with its answer; the step checks each value against
-                                  its schema and publishes it as a step output
+                                  its schema and publishes it as a step output. The default of a value also applies when
+                                  the turn fails, so it must be a value that is safe for a later step to act on
                                 type: object
                               prompt:
                                 description: message for the AI Agent
@@ -23597,7 +23603,8 @@ spec:
                               type: object
                             description: |-
                               values that the AI Agent must give with its answer; the step checks each value against
-                              its schema and publishes it as a step output
+                              its schema and publishes it as a step output. The default of a value also applies when
+                              the turn fails, so it must be a value that is safe for a later step to act on
                             type: object
                           prompt:
                             description: message for the AI Agent
@@ -24891,7 +24898,8 @@ spec:
                                   type: object
                                 description: |-
                                   values that the AI Agent must give with its answer; the step checks each value against
-                                  its schema and publishes it as a step output
+                                  its schema and publishes it as a step output. The default of a value also applies when
+                                  the turn fails, so it must be a value that is safe for a later step to act on
                                 type: object
                               prompt:
                                 description: message for the AI Agent
@@ -29643,7 +29651,8 @@ spec:
                               type: object
                             description: |-
                               values that the AI Agent must give with its answer; the step checks each value against
-                              its schema and publishes it as a step output
+                              its schema and publishes it as a step output. The default of a value also applies when
+                              the turn fails, so it must be a value that is safe for a later step to act on
                             type: object
                           prompt:
                             description: message for the AI Agent
@@ -30937,7 +30946,8 @@ spec:
                                   type: object
                                 description: |-
                                   values that the AI Agent must give with its answer; the step checks each value against
-                                  its schema and publishes it as a step output
+                                  its schema and publishes it as a step output. The default of a value also applies when
+                                  the turn fails, so it must be a value that is safe for a later step to act on
                                 type: object
                               prompt:
                                 description: message for the AI Agent
@@ -33321,7 +33331,8 @@ spec:
                               type: object
                             description: |-
                               values that the AI Agent must give with its answer; the step checks each value against
-                              its schema and publishes it as a step output
+                              its schema and publishes it as a step output. The default of a value also applies when
+                              the turn fails, so it must be a value that is safe for a later step to act on
                             type: object
                           prompt:
                             description: message for the AI Agent
@@ -34615,7 +34626,8 @@ spec:
                                   type: object
                                 description: |-
                                   values that the AI Agent must give with its answer; the step checks each value against
-                                  its schema and publishes it as a step output
+                                  its schema and publishes it as a step output. The default of a value also applies when
+                                  the turn fails, so it must be a value that is safe for a later step to act on
                                 type: object
                               prompt:
                                 description: message for the AI Agent

@@ -185,7 +185,8 @@ type StepAgent struct {
 	Thinking string `json:"thinking,omitempty" expr:"template"`
 
 	// values that the AI Agent must give with its answer; the step checks each value against
-	// its schema and publishes it as a step output
+	// its schema and publishes it as a step output. The default of a value also applies when
+	// the turn fails, so it must be a value that is safe for a later step to act on
 	Outputs map[string]ParameterSchema `json:"outputs,omitempty" expr:"include"`
 }
 
