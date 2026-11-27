@@ -470,6 +470,11 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = @orga
         )
     )
     AND (
+        COALESCE(@label_scope_key::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? @label_scope_key::text) OR
+        w.labels->>(@label_scope_key::text) = ANY(COALESCE(@label_scope_values::text[], ARRAY[]::text[]))
+    )
+    AND (
         (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
                 WHERE
@@ -641,6 +646,11 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
         )
     )
     AND (
+        COALESCE(@label_scope_key::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? @label_scope_key::text) OR
+        w.labels->>(@label_scope_key::text) = ANY(COALESCE(@label_scope_values::text[], ARRAY[]::text[]))
+    )
+    AND (
         (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
             (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
                 WHERE
@@ -797,6 +807,11 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
+    )
+    AND (
+        COALESCE(@label_scope_key::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? @label_scope_key::text) OR
+        w.labels->>(@label_scope_key::text) = ANY(COALESCE(@label_scope_values::text[], ARRAY[]::text[]))
     )
     AND (
         (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
@@ -1294,6 +1309,11 @@ FROM (
             )
         )
         AND (
+            COALESCE(@label_scope_key::text, '') = '' OR
+            NOT (COALESCE(w.labels, '{}'::jsonb) ? @label_scope_key::text) OR
+            w.labels->>(@label_scope_key::text) = ANY(COALESCE(@label_scope_values::text[], ARRAY[]::text[]))
+        )
+        AND (
             (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
                 (SELECT COUNT(*) FROM unnest(@selector_keys::text[]) AS key_condition
                     WHERE
@@ -1465,6 +1485,11 @@ WHERE (e.organization_id = @organization_id AND e.environment_id = @environment_
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
             ) > 0
         )
+    )
+    AND (
+        COALESCE(@label_scope_key::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? @label_scope_key::text) OR
+        w.labels->>(@label_scope_key::text) = ANY(COALESCE(@label_scope_values::text[], ARRAY[]::text[]))
     )
     AND (
         (COALESCE(@selector_keys::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR

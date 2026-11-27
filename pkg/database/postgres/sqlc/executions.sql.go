@@ -188,8 +188,13 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
     AND (
-        (COALESCE($24::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($24::text[]) AS key_condition
+        COALESCE($24::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? $24::text) OR
+        w.labels->>($24::text) = ANY(COALESCE($25::text[], ARRAY[]::text[]))
+    )
+    AND (
+        (COALESCE($26::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($26::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -197,13 +202,13 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($24::text[], 1)
+            ) = array_length($26::text[], 1)
         )
         AND
-        (COALESCE($25::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond
+        (COALESCE($27::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond)
         )
     )
 `
@@ -232,6 +237,8 @@ type CountTestWorkflowExecutionsParams struct {
 	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
 	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	LabelScopeKey      string             `db:"label_scope_key" json:"label_scope_key"`
+	LabelScopeValues   []string           `db:"label_scope_values" json:"label_scope_values"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 }
@@ -261,6 +268,8 @@ func (q *Queries) CountTestWorkflowExecutions(ctx context.Context, arg CountTest
 		arg.TagConditions,
 		arg.LabelKeys,
 		arg.LabelConditions,
+		arg.LabelScopeKey,
+		arg.LabelScopeValues,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
 	)
@@ -600,8 +609,13 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
         )
     )
     AND (
-        (COALESCE($24::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($24::text[]) AS key_condition
+        COALESCE($24::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? $24::text) OR
+        w.labels->>($24::text) = ANY(COALESCE($25::text[], ARRAY[]::text[]))
+    )
+    AND (
+        (COALESCE($26::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($26::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -609,17 +623,17 @@ WHERE e.status IN ('passed', 'failed', 'aborted') AND (e.organization_id = $1 AN
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($24::text[], 1)
+            ) = array_length($26::text[], 1)
         )
         AND
-        (COALESCE($25::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond
+        (COALESCE($27::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond)
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT NULLIF($27, 0) OFFSET $26
+LIMIT NULLIF($29, 0) OFFSET $28
 `
 
 type GetFinishedTestWorkflowExecutionsParams struct {
@@ -646,6 +660,8 @@ type GetFinishedTestWorkflowExecutionsParams struct {
 	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
 	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	LabelScopeKey      string             `db:"label_scope_key" json:"label_scope_key"`
+	LabelScopeValues   []string           `db:"label_scope_values" json:"label_scope_values"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
@@ -742,6 +758,8 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 		arg.TagConditions,
 		arg.LabelKeys,
 		arg.LabelConditions,
+		arg.LabelScopeKey,
+		arg.LabelScopeValues,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
 		arg.Fst,
@@ -2600,8 +2618,13 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
     AND (
-        (COALESCE($24::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($24::text[]) AS key_condition
+        COALESCE($24::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? $24::text) OR
+        w.labels->>($24::text) = ANY(COALESCE($25::text[], ARRAY[]::text[]))
+    )
+    AND (
+        (COALESCE($26::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($26::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -2609,17 +2632,17 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($24::text[], 1)
+            ) = array_length($26::text[], 1)
         )
         AND
-        (COALESCE($25::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond
+        (COALESCE($27::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond)
         )
     )
 ORDER BY e.organization_id, e.environment_id, e.scheduled_at DESC
-LIMIT NULLIF($27, 0) OFFSET $26
+LIMIT NULLIF($29, 0) OFFSET $28
 `
 
 type GetTestWorkflowExecutionsParams struct {
@@ -2646,6 +2669,8 @@ type GetTestWorkflowExecutionsParams struct {
 	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
 	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	LabelScopeKey      string             `db:"label_scope_key" json:"label_scope_key"`
+	LabelScopeValues   []string           `db:"label_scope_values" json:"label_scope_values"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
@@ -2742,6 +2767,8 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 		arg.TagConditions,
 		arg.LabelKeys,
 		arg.LabelConditions,
+		arg.LabelScopeKey,
+		arg.LabelScopeValues,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
 		arg.Fst,
@@ -2956,8 +2983,13 @@ FROM (
             )
         )
         AND (
-            (COALESCE($24::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(*) FROM unnest($24::text[]) AS key_condition
+            COALESCE($24::text, '') = '' OR
+            NOT (COALESCE(w.labels, '{}'::jsonb) ? $24::text) OR
+            w.labels->>($24::text) = ANY(COALESCE($25::text[], ARRAY[]::text[]))
+        )
+        AND (
+            (COALESCE($26::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(*) FROM unnest($26::text[]) AS key_condition
                     WHERE
                     CASE
                         WHEN key_condition LIKE '%:not_exists' THEN
@@ -2965,17 +2997,17 @@ FROM (
                         ELSE
                             w.labels ? key_condition
                     END
-                ) = array_length($24::text[], 1)
+                ) = array_length($26::text[], 1)
             )
             AND
-            (COALESCE($25::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-                (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond
+            (COALESCE($27::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+                (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond
                     WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-                ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond)
+                ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond)
             )
         )
     ORDER BY e.scheduled_at DESC
-    LIMIT NULLIF($27, 0) OFFSET $26
+    LIMIT NULLIF($29, 0) OFFSET $28
 ) e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
@@ -3008,6 +3040,8 @@ type GetTestWorkflowExecutionsSummaryParams struct {
 	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
 	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	LabelScopeKey      string             `db:"label_scope_key" json:"label_scope_key"`
+	LabelScopeValues   []string           `db:"label_scope_values" json:"label_scope_values"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32              `db:"fst" json:"fst"`
@@ -3104,6 +3138,8 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 		arg.TagConditions,
 		arg.LabelKeys,
 		arg.LabelConditions,
+		arg.LabelScopeKey,
+		arg.LabelScopeValues,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
 		arg.Fst,
@@ -3499,8 +3535,13 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
         )
     )
     AND (
-        (COALESCE($24::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(*) FROM unnest($24::text[]) AS key_condition
+        COALESCE($24::text, '') = '' OR
+        NOT (COALESCE(w.labels, '{}'::jsonb) ? $24::text) OR
+        w.labels->>($24::text) = ANY(COALESCE($25::text[], ARRAY[]::text[]))
+    )
+    AND (
+        (COALESCE($26::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(*) FROM unnest($26::text[]) AS key_condition
                 WHERE
                 CASE
                     WHEN key_condition LIKE '%:not_exists' THEN
@@ -3508,13 +3549,13 @@ WHERE (e.organization_id = $1 AND e.environment_id = $2)
                     ELSE
                         w.labels ? key_condition
                 END
-            ) = array_length($24::text[], 1)
+            ) = array_length($26::text[], 1)
         )
         AND
-        (COALESCE($25::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
-            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond
+        (COALESCE($27::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR
+            (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond
                 WHERE w.labels->>split_part(cond, '=', 1) = split_part(cond, '=', 2)
-            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($25::text[]) AS cond)
+            ) = (SELECT COUNT(DISTINCT split_part(cond, '=', 1)) FROM unnest($27::text[]) AS cond)
         )
     )
 GROUP BY e.status
@@ -3544,6 +3585,8 @@ type GetTestWorkflowExecutionsTotalsParams struct {
 	TagConditions      []string           `db:"tag_conditions" json:"tag_conditions"`
 	LabelKeys          []string           `db:"label_keys" json:"label_keys"`
 	LabelConditions    []string           `db:"label_conditions" json:"label_conditions"`
+	LabelScopeKey      string             `db:"label_scope_key" json:"label_scope_key"`
+	LabelScopeValues   []string           `db:"label_scope_values" json:"label_scope_values"`
 	SelectorKeys       []string           `db:"selector_keys" json:"selector_keys"`
 	SelectorConditions []string           `db:"selector_conditions" json:"selector_conditions"`
 }
@@ -3578,6 +3621,8 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 		arg.TagConditions,
 		arg.LabelKeys,
 		arg.LabelConditions,
+		arg.LabelScopeKey,
+		arg.LabelScopeValues,
 		arg.SelectorKeys,
 		arg.SelectorConditions,
 	)

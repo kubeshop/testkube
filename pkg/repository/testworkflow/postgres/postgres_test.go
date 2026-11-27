@@ -466,6 +466,12 @@ func (m *MockFilter) LabelSelector() *testworkflow.LabelSelector {
 	return m.Called().Get(0).(*testworkflow.LabelSelector)
 }
 
+// LabelScope returns no scope, so the tests that mock a filter need no expectation for it. The
+// scope tests use FilterImpl.
+func (m *MockFilter) LabelScope() *testworkflow.LabelScope {
+	return nil
+}
+
 func (m *MockFilter) ActorName() string {
 	return m.Called().String(0)
 }

@@ -2,6 +2,7 @@ package testworkflow
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -20,6 +21,29 @@ type Label struct {
 // Filter.Selector and Filter.TagSelector, which require every key.
 type LabelSelector struct {
 	Or []Label
+}
+
+// LabelScope selects the executions whose workflow has no label Key, or has Key with one of Values.
+// An access rule needs both parts in one condition: LabelSelector joins a missing label and a label
+// value with AND. With no Values, only the executions without the label stay.
+type LabelScope struct {
+	Key    string
+	Values []string
+}
+
+// ErrLabelScopeKey is the error for a label scope with no key. Such a scope would keep every execution,
+// so each repository refuses it.
+var ErrLabelScopeKey = errors.New("a label scope needs a label key")
+
+// CheckLabelScope returns ErrLabelScopeKey when the filter has a label scope with no key.
+func CheckLabelScope(filter Filter) error {
+	if filter == nil {
+		return nil
+	}
+	if scope := filter.LabelScope(); scope != nil && scope.Key == "" {
+		return ErrLabelScopeKey
+	}
+	return nil
 }
 
 type GetPreviousFinishedStateOptions struct {
@@ -89,6 +113,8 @@ type Filter interface {
 	TagSelector() string
 	// LabelSelector matches workflow labels. An execution matches when any one label of Or matches.
 	LabelSelector() *LabelSelector
+	// LabelScope limits the executions to the workflows that have no label Key or one of its Values.
+	LabelScope() *LabelScope
 	ActorName() string
 	ActorNameDefined() bool
 	ActorType() testkube.TestWorkflowRunningContextActorType

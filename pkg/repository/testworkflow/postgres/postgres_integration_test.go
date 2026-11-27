@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/test/fixtures"
 	testpostgres "github.com/kubeshop/testkube/pkg/test/postgres"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
@@ -994,4 +995,86 @@ func TestPostgresRepositorySignature_Integration(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, signature, got.Signature)
+}
+
+// TestPostgresRepositoryLabelScope_Integration checks the access rule of a label scope in every
+// method that takes a filter. A filter with one workflow name takes a fast path in some methods,
+// so a case checks that the scope also applies there.
+func TestPostgresRepositoryLabelScope_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	testDB, _ := testpostgres.PreparePostgresTestDatabase(t, "repo_label_scope")
+	repo := NewPostgresRepository(testDB.Pool, WithOrganizationID("test-org"), WithEnvironmentID("test-env"))
+	ctx := context.Background()
+	// The key has a dot, as the Resource Group label does, and the store escapes the dots of keys.
+	const groupLabel = "testkube.io/group"
+
+	for name, labels := range map[string]map[string]string{
+		"no-labels":   nil,
+		"other-label": {"team": "payments"},
+		"mine":        {groupLabel: "mine"},
+		"secret":      {groupLabel: "secret"},
+	} {
+		execution := fixtures.NewExecution(name, fixtures.WithStatus(testkube.PASSED_TestWorkflowStatus))
+		execution.Workflow.Labels = labels
+		require.NoError(t, repo.Insert(ctx, execution))
+	}
+
+	tests := []struct {
+		name     string
+		filter   *testworkflow.FilterImpl
+		wantRuns []string
+	}{
+		{
+			name:     "no scope lists every execution",
+			filter:   testworkflow.NewExecutionsFilter(),
+			wantRuns: []string{"mine", "no-labels", "other-label", "secret"},
+		},
+		{
+			name:     "a scope lists the executions with no group label and with a given group",
+			filter:   testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Key: groupLabel, Values: []string{"mine"}}),
+			wantRuns: []string{"mine", "no-labels", "other-label"},
+		},
+		{
+			name:     "a scope with no values lists only the executions with no group label",
+			filter:   testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Key: groupLabel}),
+			wantRuns: []string{"no-labels", "other-label"},
+		},
+		{
+			name:     "a scope also applies to the fast path of one workflow name",
+			filter:   testworkflow.NewExecutionsFilter().WithName("secret").WithLabelScope(&testworkflow.LabelScope{Key: groupLabel, Values: []string{"mine"}}),
+			wantRuns: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summaries, err := repo.GetExecutionsSummary(ctx, tt.filter)
+			require.NoError(t, err)
+			executions, err := repo.GetExecutions(ctx, tt.filter)
+			require.NoError(t, err)
+			finished, err := repo.GetFinished(ctx, tt.filter)
+			require.NoError(t, err)
+			count, err := repo.Count(ctx, tt.filter)
+			require.NoError(t, err)
+			totals, err := repo.GetExecutionsTotals(ctx, tt.filter)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.wantRuns, sortedWorkflowNames(summaries, func(e testkube.TestWorkflowExecutionSummary) string { return e.Workflow.Name }), "GetExecutionsSummary")
+			assert.Equal(t, tt.wantRuns, sortedWorkflowNames(executions, func(e testkube.TestWorkflowExecution) string { return e.Workflow.Name }), "GetExecutions")
+			assert.Equal(t, tt.wantRuns, sortedWorkflowNames(finished, func(e testkube.TestWorkflowExecution) string { return e.Workflow.Name }), "GetFinished")
+			assert.Equal(t, int64(len(tt.wantRuns)), count, "Count")
+			assert.Equal(t, int32(len(tt.wantRuns)), totals.Results, "GetExecutionsTotals")
+		})
+	}
+
+	_, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithLabelScope(&testworkflow.LabelScope{Values: []string{"mine"}}))
+	assert.ErrorIs(t, err, testworkflow.ErrLabelScopeKey, "a scope with no key would match every execution")
+}
+
+func sortedWorkflowNames[T any](items []T, workflowName func(T) string) []string {
+	var names []string
+	for _, item := range items {
+		names = append(names, workflowName(item))
+	}
+	sort.Strings(names)
+	return names
 }
