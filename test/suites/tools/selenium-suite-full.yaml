@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: selenium
+  annotations:
+    testkube.io/description: "Groups all 6 Selenium workflows, to check Java, Python and JavaScript Selenium against a standalone Chrome and a hub with nodes."
 spec:
   container:
     resources:

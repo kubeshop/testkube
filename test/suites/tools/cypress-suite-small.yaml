@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: cypress
+  annotations:
+    testkube.io/description: "Groups 5 Cypress workflows as a fast check of the Cypress integration: smoke, matrix with JUnit, negative step and templates."
 spec:
   container:
     resources:

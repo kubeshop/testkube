@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: postman
+  annotations:
+    testkube.io/description: "Groups 2 Postman workflows as a fast check: plain and template runs."
 spec:
   container:
     resources:

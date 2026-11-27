@@ -6,6 +6,8 @@ metadata:
     core-tests: workflows-suite
     type: suite
     tool: playwright
+  annotations:
+    testkube.io/description: "Groups all 6 Playwright workflows, to check the Playwright integration: video, command args, template and sharding."
 spec:
   container:
     resources:
