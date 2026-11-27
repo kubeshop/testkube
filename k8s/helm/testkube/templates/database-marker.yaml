@@ -1,0 +1,38 @@
+{{- if .Values.databasePreserve.enabled }}
+{{/*
+Persist the database currently in use (mongodb|postgresql) so that a later change
+of the chart default cannot silently switch an existing installation.
+
+Runs as a pre-install / pre-upgrade hook. Because Helm renders every manifest in a
+single pass BEFORE any hook executes, the value written here is read by
+`testkube.effectiveDatabase` on the *next* render (the marker from the previous
+release is what the main templates see during an upgrade). On the very first flip
+release, live detection covers the gap; from then on this marker is the stable,
+greppable record. `resource-policy: keep` protects the record if databasePreserve
+is later disabled.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "testkube.databaseMarkerName" . }}
+  labels:
+    {{- include "global.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: database-marker
+  annotations:
+    "helm.sh/resource-policy": keep
+    {{- if .Values.databasePreserve.useArgoHooks }}
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    {{- else }}
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+    {{- end }}
+    {{- with .Values.databasePreserve.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  database: {{ include "testkube.effectiveDatabase" . | trim | quote }}
+  release: {{ .Release.Name | quote }}
+  revision: {{ .Release.Revision | quote }}
+{{- end }}
