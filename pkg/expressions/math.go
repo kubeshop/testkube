@@ -200,17 +200,31 @@ func (s *math) Type() Type {
 	}
 }
 
-func (s *math) itemString(v Expression) string {
+func (s *math) itemString(v Expression, right bool) string {
 	if vv, ok := v.(*math); ok {
-		if getOperatorPriority(vv.operator) >= getOperatorPriority(s.operator) && (vv.operator != operatorAdd || v.Type() == vv.left.Type()) {
+		priority, itemPriority := getOperatorPriority(s.operator), getOperatorPriority(vv.operator)
+		// The parser is left-associative, so an operand on the right with the same priority
+		// keeps its parentheses, unless both sides use the same operator and the grouping
+		// doesn't change the result: a-(b-c) is not a-b-c, and a&&(b||c) is not a&&b||c.
+		flatAtSamePriority := !right || (vv.operator == s.operator && isAssociative(s.operator))
+		if (itemPriority > priority || (itemPriority == priority && flatAtSamePriority)) &&
+			(vv.operator != operatorAdd || v.Type() == vv.left.Type()) {
 			return v.String()
 		}
 	}
 	return v.SafeString()
 }
 
+func isAssociative(op operator) bool {
+	switch op {
+	case operatorAdd, operatorMultiply, operatorAnd, operatorOr:
+		return true
+	}
+	return false
+}
+
 func (s *math) String() string {
-	return s.itemString(s.left) + string(s.operator) + s.itemString(s.right)
+	return s.itemString(s.left, false) + string(s.operator) + s.itemString(s.right, true)
 }
 
 func (s *math) SafeString() string {
