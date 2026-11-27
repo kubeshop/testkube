@@ -9415,6 +9415,80 @@ spec:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
+                          outputs:
+                            additionalProperties:
+                              properties:
+                                default:
+                                  description: default value - if not provided, the parameter is required
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description:
+                                  description: parameter description
+                                  type: string
+                                enum:
+                                  description: the list of allowed values, when limited
+                                  items:
+                                    type: string
+                                  type: array
+                                example:
+                                  description: exemplary value
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                exclusiveMaximum:
+                                  description: maximum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                exclusiveMinimum:
+                                  description: minimum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                format:
+                                  description: predefined format for the string
+                                  type: string
+                                maxLength:
+                                  description: maximum length for the string
+                                  format: int64
+                                  type: integer
+                                maximum:
+                                  description: maximum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                minLength:
+                                  description: minimum length for the string
+                                  format: int64
+                                  type: integer
+                                minimum:
+                                  description: minimum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                multipleOf:
+                                  description: the number needs to be multiple of this value
+                                  format: int64
+                                  type: integer
+                                pattern:
+                                  description: regular expression to match
+                                  type: string
+                                sensitive:
+                                  description: whether this value should be stored in the secret
+                                  type: boolean
+                                type:
+                                  default: string
+                                  description: type of the parameter
+                                  enum:
+                                    - string
+                                    - integer
+                                    - number
+                                    - boolean
+                                  type: string
+                              type: object
+                            description: |-
+                              values that the AI Agent must give with its answer; the step checks each value against
+                              its schema and publishes it as a step output
+                            type: object
                           prompt:
                             description: message for the AI Agent
                             type: string
@@ -10638,6 +10712,80 @@ spec:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
+                              outputs:
+                                additionalProperties:
+                                  properties:
+                                    default:
+                                      description: default value - if not provided, the parameter is required
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    description:
+                                      description: parameter description
+                                      type: string
+                                    enum:
+                                      description: the list of allowed values, when limited
+                                      items:
+                                        type: string
+                                      type: array
+                                    example:
+                                      description: exemplary value
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    exclusiveMaximum:
+                                      description: maximum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    exclusiveMinimum:
+                                      description: minimum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    format:
+                                      description: predefined format for the string
+                                      type: string
+                                    maxLength:
+                                      description: maximum length for the string
+                                      format: int64
+                                      type: integer
+                                    maximum:
+                                      description: maximum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    minLength:
+                                      description: minimum length for the string
+                                      format: int64
+                                      type: integer
+                                    minimum:
+                                      description: minimum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    multipleOf:
+                                      description: the number needs to be multiple of this value
+                                      format: int64
+                                      type: integer
+                                    pattern:
+                                      description: regular expression to match
+                                      type: string
+                                    sensitive:
+                                      description: whether this value should be stored in the secret
+                                      type: boolean
+                                    type:
+                                      default: string
+                                      description: type of the parameter
+                                      enum:
+                                        - string
+                                        - integer
+                                        - number
+                                        - boolean
+                                      type: string
+                                  type: object
+                                description: |-
+                                  values that the AI Agent must give with its answer; the step checks each value against
+                                  its schema and publishes it as a step output
+                                type: object
                               prompt:
                                 description: message for the AI Agent
                                 type: string
@@ -15455,6 +15603,80 @@ spec:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
+                          outputs:
+                            additionalProperties:
+                              properties:
+                                default:
+                                  description: default value - if not provided, the parameter is required
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description:
+                                  description: parameter description
+                                  type: string
+                                enum:
+                                  description: the list of allowed values, when limited
+                                  items:
+                                    type: string
+                                  type: array
+                                example:
+                                  description: exemplary value
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                exclusiveMaximum:
+                                  description: maximum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                exclusiveMinimum:
+                                  description: minimum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                format:
+                                  description: predefined format for the string
+                                  type: string
+                                maxLength:
+                                  description: maximum length for the string
+                                  format: int64
+                                  type: integer
+                                maximum:
+                                  description: maximum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                minLength:
+                                  description: minimum length for the string
+                                  format: int64
+                                  type: integer
+                                minimum:
+                                  description: minimum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                multipleOf:
+                                  description: the number needs to be multiple of this value
+                                  format: int64
+                                  type: integer
+                                pattern:
+                                  description: regular expression to match
+                                  type: string
+                                sensitive:
+                                  description: whether this value should be stored in the secret
+                                  type: boolean
+                                type:
+                                  default: string
+                                  description: type of the parameter
+                                  enum:
+                                    - string
+                                    - integer
+                                    - number
+                                    - boolean
+                                  type: string
+                              type: object
+                            description: |-
+                              values that the AI Agent must give with its answer; the step checks each value against
+                              its schema and publishes it as a step output
+                            type: object
                           prompt:
                             description: message for the AI Agent
                             type: string
@@ -16678,6 +16900,80 @@ spec:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
+                              outputs:
+                                additionalProperties:
+                                  properties:
+                                    default:
+                                      description: default value - if not provided, the parameter is required
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    description:
+                                      description: parameter description
+                                      type: string
+                                    enum:
+                                      description: the list of allowed values, when limited
+                                      items:
+                                        type: string
+                                      type: array
+                                    example:
+                                      description: exemplary value
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    exclusiveMaximum:
+                                      description: maximum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    exclusiveMinimum:
+                                      description: minimum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    format:
+                                      description: predefined format for the string
+                                      type: string
+                                    maxLength:
+                                      description: maximum length for the string
+                                      format: int64
+                                      type: integer
+                                    maximum:
+                                      description: maximum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    minLength:
+                                      description: minimum length for the string
+                                      format: int64
+                                      type: integer
+                                    minimum:
+                                      description: minimum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    multipleOf:
+                                      description: the number needs to be multiple of this value
+                                      format: int64
+                                      type: integer
+                                    pattern:
+                                      description: regular expression to match
+                                      type: string
+                                    sensitive:
+                                      description: whether this value should be stored in the secret
+                                      type: boolean
+                                    type:
+                                      default: string
+                                      description: type of the parameter
+                                      enum:
+                                        - string
+                                        - integer
+                                        - number
+                                        - boolean
+                                      type: string
+                                  type: object
+                                description: |-
+                                  values that the AI Agent must give with its answer; the step checks each value against
+                                  its schema and publishes it as a step output
+                                type: object
                               prompt:
                                 description: message for the AI Agent
                                 type: string
@@ -19107,6 +19403,80 @@ spec:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
+                          outputs:
+                            additionalProperties:
+                              properties:
+                                default:
+                                  description: default value - if not provided, the parameter is required
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description:
+                                  description: parameter description
+                                  type: string
+                                enum:
+                                  description: the list of allowed values, when limited
+                                  items:
+                                    type: string
+                                  type: array
+                                example:
+                                  description: exemplary value
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                exclusiveMaximum:
+                                  description: maximum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                exclusiveMinimum:
+                                  description: minimum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                format:
+                                  description: predefined format for the string
+                                  type: string
+                                maxLength:
+                                  description: maximum length for the string
+                                  format: int64
+                                  type: integer
+                                maximum:
+                                  description: maximum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                minLength:
+                                  description: minimum length for the string
+                                  format: int64
+                                  type: integer
+                                minimum:
+                                  description: minimum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                multipleOf:
+                                  description: the number needs to be multiple of this value
+                                  format: int64
+                                  type: integer
+                                pattern:
+                                  description: regular expression to match
+                                  type: string
+                                sensitive:
+                                  description: whether this value should be stored in the secret
+                                  type: boolean
+                                type:
+                                  default: string
+                                  description: type of the parameter
+                                  enum:
+                                    - string
+                                    - integer
+                                    - number
+                                    - boolean
+                                  type: string
+                              type: object
+                            description: |-
+                              values that the AI Agent must give with its answer; the step checks each value against
+                              its schema and publishes it as a step output
+                            type: object
                           prompt:
                             description: message for the AI Agent
                             type: string
@@ -20330,6 +20700,80 @@ spec:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
+                              outputs:
+                                additionalProperties:
+                                  properties:
+                                    default:
+                                      description: default value - if not provided, the parameter is required
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    description:
+                                      description: parameter description
+                                      type: string
+                                    enum:
+                                      description: the list of allowed values, when limited
+                                      items:
+                                        type: string
+                                      type: array
+                                    example:
+                                      description: exemplary value
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    exclusiveMaximum:
+                                      description: maximum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    exclusiveMinimum:
+                                      description: minimum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    format:
+                                      description: predefined format for the string
+                                      type: string
+                                    maxLength:
+                                      description: maximum length for the string
+                                      format: int64
+                                      type: integer
+                                    maximum:
+                                      description: maximum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    minLength:
+                                      description: minimum length for the string
+                                      format: int64
+                                      type: integer
+                                    minimum:
+                                      description: minimum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    multipleOf:
+                                      description: the number needs to be multiple of this value
+                                      format: int64
+                                      type: integer
+                                    pattern:
+                                      description: regular expression to match
+                                      type: string
+                                    sensitive:
+                                      description: whether this value should be stored in the secret
+                                      type: boolean
+                                    type:
+                                      default: string
+                                      description: type of the parameter
+                                      enum:
+                                        - string
+                                        - integer
+                                        - number
+                                        - boolean
+                                      type: string
+                                  type: object
+                                description: |-
+                                  values that the AI Agent must give with its answer; the step checks each value against
+                                  its schema and publishes it as a step output
+                                type: object
                               prompt:
                                 description: message for the AI Agent
                                 type: string
@@ -23081,6 +23525,80 @@ spec:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
+                          outputs:
+                            additionalProperties:
+                              properties:
+                                default:
+                                  description: default value - if not provided, the parameter is required
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description:
+                                  description: parameter description
+                                  type: string
+                                enum:
+                                  description: the list of allowed values, when limited
+                                  items:
+                                    type: string
+                                  type: array
+                                example:
+                                  description: exemplary value
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                exclusiveMaximum:
+                                  description: maximum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                exclusiveMinimum:
+                                  description: minimum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                format:
+                                  description: predefined format for the string
+                                  type: string
+                                maxLength:
+                                  description: maximum length for the string
+                                  format: int64
+                                  type: integer
+                                maximum:
+                                  description: maximum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                minLength:
+                                  description: minimum length for the string
+                                  format: int64
+                                  type: integer
+                                minimum:
+                                  description: minimum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                multipleOf:
+                                  description: the number needs to be multiple of this value
+                                  format: int64
+                                  type: integer
+                                pattern:
+                                  description: regular expression to match
+                                  type: string
+                                sensitive:
+                                  description: whether this value should be stored in the secret
+                                  type: boolean
+                                type:
+                                  default: string
+                                  description: type of the parameter
+                                  enum:
+                                    - string
+                                    - integer
+                                    - number
+                                    - boolean
+                                  type: string
+                              type: object
+                            description: |-
+                              values that the AI Agent must give with its answer; the step checks each value against
+                              its schema and publishes it as a step output
+                            type: object
                           prompt:
                             description: message for the AI Agent
                             type: string
@@ -24301,6 +24819,80 @@ spec:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
+                              outputs:
+                                additionalProperties:
+                                  properties:
+                                    default:
+                                      description: default value - if not provided, the parameter is required
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    description:
+                                      description: parameter description
+                                      type: string
+                                    enum:
+                                      description: the list of allowed values, when limited
+                                      items:
+                                        type: string
+                                      type: array
+                                    example:
+                                      description: exemplary value
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    exclusiveMaximum:
+                                      description: maximum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    exclusiveMinimum:
+                                      description: minimum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    format:
+                                      description: predefined format for the string
+                                      type: string
+                                    maxLength:
+                                      description: maximum length for the string
+                                      format: int64
+                                      type: integer
+                                    maximum:
+                                      description: maximum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    minLength:
+                                      description: minimum length for the string
+                                      format: int64
+                                      type: integer
+                                    minimum:
+                                      description: minimum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    multipleOf:
+                                      description: the number needs to be multiple of this value
+                                      format: int64
+                                      type: integer
+                                    pattern:
+                                      description: regular expression to match
+                                      type: string
+                                    sensitive:
+                                      description: whether this value should be stored in the secret
+                                      type: boolean
+                                    type:
+                                      default: string
+                                      description: type of the parameter
+                                      enum:
+                                        - string
+                                        - integer
+                                        - number
+                                        - boolean
+                                      type: string
+                                  type: object
+                                description: |-
+                                  values that the AI Agent must give with its answer; the step checks each value against
+                                  its schema and publishes it as a step output
+                                type: object
                               prompt:
                                 description: message for the AI Agent
                                 type: string
@@ -28979,6 +29571,80 @@ spec:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
+                          outputs:
+                            additionalProperties:
+                              properties:
+                                default:
+                                  description: default value - if not provided, the parameter is required
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description:
+                                  description: parameter description
+                                  type: string
+                                enum:
+                                  description: the list of allowed values, when limited
+                                  items:
+                                    type: string
+                                  type: array
+                                example:
+                                  description: exemplary value
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                exclusiveMaximum:
+                                  description: maximum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                exclusiveMinimum:
+                                  description: minimum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                format:
+                                  description: predefined format for the string
+                                  type: string
+                                maxLength:
+                                  description: maximum length for the string
+                                  format: int64
+                                  type: integer
+                                maximum:
+                                  description: maximum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                minLength:
+                                  description: minimum length for the string
+                                  format: int64
+                                  type: integer
+                                minimum:
+                                  description: minimum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                multipleOf:
+                                  description: the number needs to be multiple of this value
+                                  format: int64
+                                  type: integer
+                                pattern:
+                                  description: regular expression to match
+                                  type: string
+                                sensitive:
+                                  description: whether this value should be stored in the secret
+                                  type: boolean
+                                type:
+                                  default: string
+                                  description: type of the parameter
+                                  enum:
+                                    - string
+                                    - integer
+                                    - number
+                                    - boolean
+                                  type: string
+                              type: object
+                            description: |-
+                              values that the AI Agent must give with its answer; the step checks each value against
+                              its schema and publishes it as a step output
+                            type: object
                           prompt:
                             description: message for the AI Agent
                             type: string
@@ -30199,6 +30865,80 @@ spec:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
+                              outputs:
+                                additionalProperties:
+                                  properties:
+                                    default:
+                                      description: default value - if not provided, the parameter is required
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    description:
+                                      description: parameter description
+                                      type: string
+                                    enum:
+                                      description: the list of allowed values, when limited
+                                      items:
+                                        type: string
+                                      type: array
+                                    example:
+                                      description: exemplary value
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    exclusiveMaximum:
+                                      description: maximum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    exclusiveMinimum:
+                                      description: minimum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    format:
+                                      description: predefined format for the string
+                                      type: string
+                                    maxLength:
+                                      description: maximum length for the string
+                                      format: int64
+                                      type: integer
+                                    maximum:
+                                      description: maximum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    minLength:
+                                      description: minimum length for the string
+                                      format: int64
+                                      type: integer
+                                    minimum:
+                                      description: minimum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    multipleOf:
+                                      description: the number needs to be multiple of this value
+                                      format: int64
+                                      type: integer
+                                    pattern:
+                                      description: regular expression to match
+                                      type: string
+                                    sensitive:
+                                      description: whether this value should be stored in the secret
+                                      type: boolean
+                                    type:
+                                      default: string
+                                      description: type of the parameter
+                                      enum:
+                                        - string
+                                        - integer
+                                        - number
+                                        - boolean
+                                      type: string
+                                  type: object
+                                description: |-
+                                  values that the AI Agent must give with its answer; the step checks each value against
+                                  its schema and publishes it as a step output
+                                type: object
                               prompt:
                                 description: message for the AI Agent
                                 type: string
@@ -32509,6 +33249,80 @@ spec:
                             description: name of the AI Agent
                             minLength: 1
                             type: string
+                          outputs:
+                            additionalProperties:
+                              properties:
+                                default:
+                                  description: default value - if not provided, the parameter is required
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                description:
+                                  description: parameter description
+                                  type: string
+                                enum:
+                                  description: the list of allowed values, when limited
+                                  items:
+                                    type: string
+                                  type: array
+                                example:
+                                  description: exemplary value
+                                  anyOf:
+                                    - type: integer
+                                    - type: string
+                                  x-kubernetes-int-or-string: true
+                                exclusiveMaximum:
+                                  description: maximum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                exclusiveMinimum:
+                                  description: minimum value for the number (exclusive)
+                                  format: int64
+                                  type: integer
+                                format:
+                                  description: predefined format for the string
+                                  type: string
+                                maxLength:
+                                  description: maximum length for the string
+                                  format: int64
+                                  type: integer
+                                maximum:
+                                  description: maximum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                minLength:
+                                  description: minimum length for the string
+                                  format: int64
+                                  type: integer
+                                minimum:
+                                  description: minimum value for the number (inclusive)
+                                  format: int64
+                                  type: integer
+                                multipleOf:
+                                  description: the number needs to be multiple of this value
+                                  format: int64
+                                  type: integer
+                                pattern:
+                                  description: regular expression to match
+                                  type: string
+                                sensitive:
+                                  description: whether this value should be stored in the secret
+                                  type: boolean
+                                type:
+                                  default: string
+                                  description: type of the parameter
+                                  enum:
+                                    - string
+                                    - integer
+                                    - number
+                                    - boolean
+                                  type: string
+                              type: object
+                            description: |-
+                              values that the AI Agent must give with its answer; the step checks each value against
+                              its schema and publishes it as a step output
+                            type: object
                           prompt:
                             description: message for the AI Agent
                             type: string
@@ -33729,6 +34543,80 @@ spec:
                                 description: name of the AI Agent
                                 minLength: 1
                                 type: string
+                              outputs:
+                                additionalProperties:
+                                  properties:
+                                    default:
+                                      description: default value - if not provided, the parameter is required
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    description:
+                                      description: parameter description
+                                      type: string
+                                    enum:
+                                      description: the list of allowed values, when limited
+                                      items:
+                                        type: string
+                                      type: array
+                                    example:
+                                      description: exemplary value
+                                      anyOf:
+                                        - type: integer
+                                        - type: string
+                                      x-kubernetes-int-or-string: true
+                                    exclusiveMaximum:
+                                      description: maximum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    exclusiveMinimum:
+                                      description: minimum value for the number (exclusive)
+                                      format: int64
+                                      type: integer
+                                    format:
+                                      description: predefined format for the string
+                                      type: string
+                                    maxLength:
+                                      description: maximum length for the string
+                                      format: int64
+                                      type: integer
+                                    maximum:
+                                      description: maximum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    minLength:
+                                      description: minimum length for the string
+                                      format: int64
+                                      type: integer
+                                    minimum:
+                                      description: minimum value for the number (inclusive)
+                                      format: int64
+                                      type: integer
+                                    multipleOf:
+                                      description: the number needs to be multiple of this value
+                                      format: int64
+                                      type: integer
+                                    pattern:
+                                      description: regular expression to match
+                                      type: string
+                                    sensitive:
+                                      description: whether this value should be stored in the secret
+                                      type: boolean
+                                    type:
+                                      default: string
+                                      description: type of the parameter
+                                      enum:
+                                        - string
+                                        - integer
+                                        - number
+                                        - boolean
+                                      type: string
+                                  type: object
+                                description: |-
+                                  values that the AI Agent must give with its answer; the step checks each value against
+                                  its schema and publishes it as a step output
+                                type: object
                               prompt:
                                 description: message for the AI Agent
                                 type: string

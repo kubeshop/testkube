@@ -183,6 +183,10 @@ type StepAgent struct {
 	// reasoning effort for the turn: none, minimal, low, medium, high, xhigh or max;
 	// when empty, the AI Agent uses its default effort
 	Thinking string `json:"thinking,omitempty" expr:"template"`
+
+	// values that the AI Agent must give with its answer; the step checks each value against
+	// its schema and publishes it as a step output
+	Outputs map[string]ParameterSchema `json:"outputs,omitempty" expr:"include"`
 }
 
 type TarballRequest struct {

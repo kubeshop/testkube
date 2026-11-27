@@ -36,6 +36,19 @@
 //     step output. The init process skips an output file above data.MaxOutputSize, and an
 //     answer has no size limit. A later step reads the answer at step.<id>.results/response.md,
 //     so the author sets the id or the name of the step to know that path.
+//   - agent_outputs.go gives the outputs that the step declares under `outputs`. Each one has
+//     the schema of a config parameter. The command adds a contract to the prompt: the answer
+//     ends with a fenced block with the language testkube-outputs that holds one JSON object.
+//     The command reads the last block, checks each field against its schema, and writes each
+//     value as a step output, so a later step reads step.<id>.outputs.<name>. A value is text,
+//     a number or a boolean; a list and an object fail. A field that the answer does not have
+//     takes its default.
+//   - An answer with no valid outputs fails the step. Then, and when the turn fails or the
+//     control plane refuses it, the command writes the default of each output that has one. A
+//     condition on an output that does not exist aborts the execution, and with a default it
+//     reads a known value, such as "no-go". An output with no default has no value then.
+//   - The command fails before the first call for an output name that the init process does
+//     not read as a file, for the name `session`, and for a default that its schema refuses.
 //   - The processor gives an ID to each step, so each agent step has a results directory. When
 //     the step has no results directory, the command fails before it starts a turn.
 //   - The ID goes to the first stage of a step only, and the init process collects the session

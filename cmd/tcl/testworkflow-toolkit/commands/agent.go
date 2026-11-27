@@ -112,9 +112,21 @@ type agentStep struct {
 	pollInterval time.Duration
 }
 
-// run starts the turn and follows it to its end. It returns an error for each end that is not a
-// completed turn.
+// run runs the turn and gives the declared outputs a value. When the turn gives no valid
+// outputs, each output that has a default takes it, so a later condition reads a known value.
 func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) error {
+	err := s.runTurn(ctx, spec)
+	if err != nil {
+		if writeErr := s.writeOutputs(agentOutputDefaults(spec.Outputs)); writeErr != nil {
+			s.printf("warn: cannot write the default outputs: %s\n", writeErr.Error())
+		}
+	}
+	return err
+}
+
+// runTurn starts the turn and follows it to its end. It returns an error for each end that is
+// not a completed turn with valid outputs.
+func (s *agentStep) runTurn(ctx context.Context, spec testworkflowsv1.StepAgent) error {
 	// The answer is a file in the results directory. The processor gives each step an ID. A turn
 	// costs time and tokens, so the step starts no turn when it has no place for the answer.
 	if s.resultsDir == "" {
@@ -125,7 +137,7 @@ func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) err
 			RequestId: s.requestID,
 			StepRef:   s.stepRef,
 			AgentName: spec.Name,
-			Prompt:    spec.Prompt,
+			Prompt:    spec.Prompt + agentOutputsContract(spec.Outputs),
 		})
 	})
 	if err != nil {
@@ -147,7 +159,7 @@ func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) err
 
 		switch turn.GetState() {
 		case cloud.AgentTurnState_AGENT_TURN_STATE_COMPLETED:
-			return s.writeAnswer(turn)
+			return s.writeAnswer(turn, spec.Outputs)
 		case cloud.AgentTurnState_AGENT_TURN_STATE_FAILED:
 			return fmt.Errorf("the AI Agent failed: %s", plainText(turn.GetMessage()))
 		case cloud.AgentTurnState_AGENT_TURN_STATE_CANCELED:
@@ -235,12 +247,38 @@ func (s *agentStep) printEvents(events []*cloud.AgentTurnEvent) {
 	}
 }
 
-func (s *agentStep) writeAnswer(turn *cloud.AgentTurn) error {
+// writeAnswer writes the file with the answer, and then the declared outputs. The file comes
+// first, so a person reads the answer also when its outputs are not valid.
+func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testworkflowsv1.ParameterSchema) error {
+	answer := plainText(turn.GetAnswer())
 	path := filepath.Join(s.resultsDir, agentResponseFile)
-	if err := writeStepFile(path, plainText(turn.GetAnswer())); err != nil {
+	if err := writeStepFile(path, answer); err != nil {
 		return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
 	}
 	s.printf("The answer is in %s\n", path)
+	if len(outputs) == 0 {
+		return nil
+	}
+	values, err := resolveAgentOutputs(outputs, answer)
+	if err != nil {
+		return fmt.Errorf("the answer of the AI Agent does not give the outputs of the step: %w", err)
+	}
+	if err := s.writeOutputs(values); err != nil {
+		return err
+	}
+	for _, name := range agentOutputNames(outputs) {
+		s.printf("Output %s: %s\n", name, values[name])
+	}
+	return nil
+}
+
+// writeOutputs writes one step output for each value.
+func (s *agentStep) writeOutputs(values map[string]string) error {
+	for name, value := range values {
+		if err := writeStepFile(filepath.Join(s.outputsDir, name), value); err != nil {
+			return fmt.Errorf("cannot write the %q output: %w", name, err)
+		}
+	}
 	return nil
 }
 
@@ -281,6 +319,10 @@ func NewAgentCmd() *cobra.Command {
 			spec, err := resolveAgentSpec(spec, machine)
 			if err != nil {
 				toolkitcommon.Fail(err)
+			}
+
+			if err := checkAgentOutputSchemas(spec.Outputs); err != nil {
+				toolkitcommon.Fail(&DefinitionError{Subject: agentSubject, Err: err})
 			}
 
 			client, err := env.Cloud()

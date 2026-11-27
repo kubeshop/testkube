@@ -110,6 +110,8 @@ func TestAgentStep_Run(t *testing.T) {
 		stop bool
 		// noStepID runs the step with no results directory.
 		noStepID bool
+		// outputs are the outputs that the step declares.
+		outputs map[string]testworkflowsv1.ParameterSchema
 
 		wantErr     string
 		wantLog     []string
@@ -120,6 +122,35 @@ func TestAgentStep_Run(t *testing.T) {
 		// wantAnswer is the content of the file with the answer. Empty means no file.
 		wantAnswer string
 	}{
+		{
+			name:    "writes the declared outputs that the answer gives",
+			outputs: map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
+			start:   agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1", Next: 0}},
+			gets: []agentReply{
+				{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Next: 1, Answer: "All suites passed.\n" + outputsBlock(`{"verdict": "go"}`)}},
+			},
+			wantLog:     []string{"Output verdict: go\n"},
+			wantOutputs: map[string]string{"session": "session-1", "verdict": "go"},
+			wantAnswer:  "All suites passed.\n" + outputsBlock(`{"verdict": "go"}`),
+		},
+		{
+			name:    "fails for an answer with no valid outputs, and writes the answer and the defaults",
+			outputs: map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
+			start:   agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1", Next: 0}},
+			gets: []agentReply{
+				{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Next: 1, Answer: "Go."}},
+			},
+			wantErr:     "the answer of the AI Agent does not give the outputs of the step: the answer has no `testkube-outputs` block",
+			wantOutputs: map[string]string{"session": "session-1", "verdict": "no-go"},
+			wantAnswer:  "Go.",
+		},
+		{
+			name:        "writes the defaults when the control plane refuses the turn",
+			outputs:     map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
+			start:       agentReply{err: status.Error(codes.ResourceExhausted, "the execution started 20 turns")},
+			wantErr:     "cannot start the AI Agent",
+			wantOutputs: map[string]string{"verdict": "no-go"},
+		},
 		{
 			name:  "prints the events and writes the answer of a completed turn to the file",
 			start: agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1", Next: 0}},
@@ -240,7 +271,7 @@ func TestAgentStep_Run(t *testing.T) {
 				step.resultsDir = ""
 			}
 
-			err := step.run(ctx, testworkflowsv1.StepAgent{Name: "failure-triage", Prompt: "Find the cause."})
+			err := step.run(ctx, testworkflowsv1.StepAgent{Name: "failure-triage", Prompt: "Find the cause.", Outputs: tt.outputs})
 
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
@@ -256,7 +287,7 @@ func TestAgentStep_Run(t *testing.T) {
 				assert.Equal(t, "request-1", client.started[0].GetRequestId())
 				assert.Equal(t, "ref-1", client.started[0].GetStepRef())
 				assert.Equal(t, "failure-triage", client.started[0].GetAgentName())
-				assert.Equal(t, "Find the cause.", client.started[0].GetPrompt())
+				assert.Equal(t, "Find the cause."+agentOutputsContract(tt.outputs), client.started[0].GetPrompt())
 			}
 
 			for _, line := range tt.wantLog {

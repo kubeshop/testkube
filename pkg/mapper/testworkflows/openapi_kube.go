@@ -1130,6 +1130,7 @@ func MapStepAgentAPIToKube(v testkube.TestWorkflowStepAgent) testworkflowsv1.Ste
 		Prompt:   v.Prompt,
 		Model:    v.Model,
 		Thinking: v.Thinking,
+		Outputs:  common.MapMap(v.Outputs, MapParameterSchemaAPIToKube),
 	}
 }
 
