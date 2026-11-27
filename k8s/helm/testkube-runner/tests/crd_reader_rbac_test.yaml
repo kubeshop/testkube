@@ -1,0 +1,77 @@
+suite: testkube-runner crd reader rbac
+templates:
+  - crd-reader-rbac.yaml
+release:
+  name: tk
+  namespace: testkube-dev
+tests:
+  - it: grants nothing to a runner-only agent
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: grants read on customresourcedefinitions when listener.enabled=true
+    set:
+      listener.enabled: true
+    documentSelector:
+      path: metadata.name
+      value: crd-reader-tk
+    asserts:
+      - isKind:
+          of: ClusterRole
+      - equal:
+          path: rules
+          value:
+            - apiGroups:
+                - apiextensions.k8s.io
+              resources:
+                - customresourcedefinitions
+              verbs:
+                - get
+                - list
+                - watch
+
+  - it: grants the same when gitops.enabled=true and listener is off
+    set:
+      gitops.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: crd-reader-tk
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: crd-reader-rb-tk
+        documentIndex: 1
+
+  - it: binds the agent service account
+    set:
+      listener.enabled: true
+    documentSelector:
+      path: metadata.name
+      value: crd-reader-rb-tk
+    asserts:
+      - isKind:
+          of: ClusterRoleBinding
+      - equal:
+          path: roleRef.kind
+          value: ClusterRole
+      - equal:
+          path: roleRef.name
+          value: crd-reader-tk
+      - equal:
+          path: subjects[0].name
+          value: agent-sa-tk
+      - equal:
+          path: subjects[0].namespace
+          value: testkube-dev
+
+  - it: grants nothing when the service account is not auto-created
+    set:
+      listener.enabled: true
+      pod.serviceAccount.autoCreate: false
+    asserts:
+      - hasDocuments:
+          count: 0
