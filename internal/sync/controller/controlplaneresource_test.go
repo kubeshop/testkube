@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,7 @@ import (
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -94,6 +96,77 @@ func TestSyncedControlPlaneKinds(t *testing.T) {
 		capabilities.CapabilityControlPlaneResourcesAI,
 		capabilities.CapabilityControlPlaneResources,
 	})))
+}
+
+// failingMapper fails every lookup with an error other than a missing kind, as a discovery outage
+// does.
+type failingMapper struct {
+	meta.RESTMapper
+}
+
+func (failingMapper) RESTMapping(schema.GroupKind, ...string) (*meta.RESTMapping, error) {
+	return nil, errors.New("discovery unavailable")
+}
+
+// The Control Plane resource kinds are cached only in the runner's namespace, so the manager is
+// given each synced kind whose CRD is installed, and ConfigMaps when a kind reads Skills from them.
+// A kind whose CRD is missing is left out, as the manager would fail to start on it.
+func TestControlPlaneResourceCacheObjects(t *testing.T) {
+	installed := func(kinds ...schema.GroupVersionKind) meta.RESTMapper {
+		mapper := meta.NewDefaultRESTMapper(nil)
+		for _, gvk := range kinds {
+			mapper.Add(gvk, meta.RESTScopeNamespace)
+		}
+		return mapper
+	}
+	boardGVK := insightsv1.GroupVersion.WithKind(insightsv1.BoardKind)
+	skillGVK := aiv1.GroupVersion.WithKind(aiv1.SkillKind)
+	every := []capabilities.Capability{
+		capabilities.CapabilityControlPlaneResources,
+		capabilities.CapabilityControlPlaneResourcesAI,
+		capabilities.CapabilityControlPlaneResourcesSkills,
+	}
+	typeNames := func(objects []client.Object) []string {
+		out := make([]string, 0, len(objects))
+		for _, obj := range objects {
+			out = append(out, fmt.Sprintf("%T", obj))
+		}
+		return out
+	}
+
+	tests := []struct {
+		name       string
+		mapper     meta.RESTMapper
+		advertised []capabilities.Capability
+		want       []string
+	}{
+		{name: "nothing advertised", mapper: installed(boardGVK, skillGVK), want: []string{}},
+		{
+			name:       "boards only, without ConfigMaps",
+			mapper:     installed(boardGVK, skillGVK),
+			advertised: []capabilities.Capability{capabilities.CapabilityControlPlaneResources},
+			want:       []string{"*v1alpha1.Board"},
+		},
+		{
+			name:       "kinds without a CRD are left out, and Skills bring ConfigMaps",
+			mapper:     installed(boardGVK, skillGVK),
+			advertised: every,
+			want:       []string{"*v1alpha1.Board", "*v1alpha1.Skill", "*v1.ConfigMap"},
+		},
+		{name: "no CRD installed", mapper: installed(), advertised: every, want: []string{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects, err := ControlPlaneResourceCacheObjects(tt.mapper, tt.advertised)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, typeNames(objects))
+		})
+	}
+
+	t.Run("a failed lookup is an error", func(t *testing.T) {
+		_, err := ControlPlaneResourceCacheObjects(failingMapper{}, every)
+		assert.ErrorContains(t, err, "look up the Board CRD: discovery unavailable")
+	})
 }
 
 func request(name string) reconcile.Request {
