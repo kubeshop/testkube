@@ -713,7 +713,7 @@ testkube-api:
   testServiceAccount:
     # -- Specifies whether a service account should be created
     create: true
-    # -- Annotations to add to the service account
+    # -- Annotations to add to the test job service accounts. When empty, they get `serviceAccount.annotations`
     annotations: {}
 
   # -- Enable a [pod distruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) to help dealing with [disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
