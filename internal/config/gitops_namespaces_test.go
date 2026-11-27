@@ -83,18 +83,27 @@ func TestValidateGitOpsNamespaces(t *testing.T) {
 			wantErr:    `GITOPS_NAMESPACES: "*" watches every namespace, but the Control Plane lacks the sync-multi-namespace capability`,
 		},
 		{name: "several namespaces and * with the capability pass", namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "b"}, {Name: "*"}}, capability: true},
+		{name: "the token Environment passes with the capability", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-token"}, {Name: "b"}}, capability: true},
+		// The sync client sends every request into the token Environment, so a namespace mapped
+		// to another one would sync there instead of where it says, even when the Control Plane
+		// has the capability and the Environment is the agent's.
 		{
-			name:       "an unknown envId fails and lists the known Environments",
+			name:       "another Environment of the agent fails, with the capability",
+			namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "b", EnvID: "env-other"}},
+			capability: true,
+			wantErr:    `GITOPS_NAMESPACES: namespace "b" maps to Environment "env-other", but every namespace syncs into the Environment of the agent token, "env-token"`,
+		},
+		{
+			name:       "another Environment of the agent fails, without the capability",
+			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}},
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-other", but every namespace syncs into the Environment of the agent token, "env-token"`,
+		},
+		{
+			name:       "an unknown Environment fails",
 			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-missing"}},
 			capability: true,
-			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-missing", which is not an Environment of the agent (known: env-token, env-other)`,
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-missing", but every namespace syncs into the Environment of the agent token, "env-token"`,
 		},
-		{
-			name:       "a known envId without the capability fails and names the capability",
-			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}},
-			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-other", but the Control Plane lacks the sync-multi-namespace capability`,
-		},
-		{name: "a known envId with the capability passes", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-other"}}, capability: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

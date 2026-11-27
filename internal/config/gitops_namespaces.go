@@ -74,61 +74,27 @@ func ParseGitOpsNamespaces(raw, defaultNamespace string) (GitOpsNamespaces, erro
 }
 
 // ValidateGitOpsNamespaces checks the Environments of GITOPS_NAMESPACES against the Control Plane.
-// An entry mapped to an Environment other than the one of the agent token must name an
-// Environment of the agent, and needs the sync-multi-namespace capability. The capability is also
+// Every namespace syncs into the Environment of the agent token: the sync client sends neither
+// updates nor deletes with the Environment of a namespace, so an entry mapped to another
+// Environment fails rather than syncing there silently. The sync-multi-namespace capability is
 // needed when several namespaces sync into one Environment, or with *, because only then does the
-// Control Plane keep same-name resources of different namespaces apart. One namespace in the token
-// Environment passes without it, as before GITOPS_NAMESPACES.
+// Control Plane keep same-name resources of different namespaces apart. One namespace passes
+// without it, as before GITOPS_NAMESPACES.
 func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, proContext ProContext) error {
 	capable := proContext.MultiNamespaceSyncSupportedInControlPlane
 	for _, ns := range namespaces {
-		envID := ns.EnvID
-		if envID == "" {
-			envID = proContext.EnvID
+		if ns.EnvID != "" && ns.EnvID != proContext.EnvID {
+			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, but every namespace syncs into the Environment of the agent token, %q",
+				ns.Name, ns.EnvID, proContext.EnvID)
 		}
 		if ns.Name == GitOpsAllNamespaces && !capable {
 			return fmt.Errorf("GITOPS_NAMESPACES: %q watches every namespace, but the Control Plane lacks the sync-multi-namespace capability",
 				GitOpsAllNamespaces)
 		}
-		if envID == proContext.EnvID {
-			continue
-		}
-		if !agentHasEnvironment(proContext, envID) {
-			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, which is not an Environment of the agent (known: %s)",
-				ns.Name, envID, strings.Join(knownEnvironmentIDs(proContext), ", "))
-		}
-		if !capable {
-			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, but the Control Plane lacks the sync-multi-namespace capability",
-				ns.Name, envID)
-		}
 	}
-	// Without the capability, every entry left is in the token Environment.
 	if !capable && len(namespaces) > 1 {
 		return fmt.Errorf("GITOPS_NAMESPACES: %d namespaces sync into Environment %q, but the Control Plane lacks the sync-multi-namespace capability",
 			len(namespaces), proContext.EnvID)
 	}
 	return nil
-}
-
-// knownEnvironmentIDs lists the token Environment first, then the other Environments of the agent.
-func knownEnvironmentIDs(proContext ProContext) []string {
-	known := make([]string, 0, len(proContext.Agent.Environments)+1)
-	if proContext.EnvID != "" {
-		known = append(known, proContext.EnvID)
-	}
-	for _, env := range proContext.Agent.Environments {
-		if env.ID != proContext.EnvID {
-			known = append(known, env.ID)
-		}
-	}
-	return known
-}
-
-func agentHasEnvironment(proContext ProContext, envID string) bool {
-	for _, env := range proContext.Agent.Environments {
-		if env.ID == envID {
-			return true
-		}
-	}
-	return false
 }
