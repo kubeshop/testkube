@@ -526,19 +526,10 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			pod, ok := obj.(*corev1.Pod)
+			pod, ok := unwrapDeletedObject[*corev1.Pod](obj)
 			if !ok {
-				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
-					return
-				}
-
-				pod, ok = tombstone.Obj.(*corev1.Pod)
-				if !ok {
-					s.logger.Errorf("failed to process delete pod event due to tombstone containing an unexpected type, received type %+v", tombstone.Obj)
-					return
-				}
+				s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
+				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
 			event := s.newWatcherEvent(testtrigger.EventDeleted, &pod.ObjectMeta, pod, testtrigger.ResourcePod,
@@ -608,9 +599,9 @@ func (s *Service) deploymentEventHandler(ctx context.Context) cache.ResourceEven
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			deployment, ok := obj.(*appsv1.Deployment)
+			deployment, ok := unwrapDeletedObject[*appsv1.Deployment](obj)
 			if !ok {
-				s.logger.Errorf("failed to process create deployment event due to it being an unexpected type, received type %+v", obj)
+				s.logger.Errorf("failed to process delete deployment event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: deployment %s/%s deleted", deployment.Namespace, deployment.Name)
@@ -679,7 +670,7 @@ func (s *Service) statefulSetEventHandler(ctx context.Context) cache.ResourceEve
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			statefulset, ok := obj.(*appsv1.StatefulSet)
+			statefulset, ok := unwrapDeletedObject[*appsv1.StatefulSet](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete statefulset event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -750,7 +741,7 @@ func (s *Service) daemonSetEventHandler(ctx context.Context) cache.ResourceEvent
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			daemonset, ok := obj.(*appsv1.DaemonSet)
+			daemonset, ok := unwrapDeletedObject[*appsv1.DaemonSet](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete daemonset event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -828,7 +819,7 @@ func (s *Service) serviceEventHandler(ctx context.Context) cache.ResourceEventHa
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			service, ok := obj.(*corev1.Service)
+			service, ok := unwrapDeletedObject[*corev1.Service](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete service event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -895,7 +886,7 @@ func (s *Service) ingressEventHandler(ctx context.Context) cache.ResourceEventHa
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			ingress, ok := obj.(*networkingv1.Ingress)
+			ingress, ok := unwrapDeletedObject[*networkingv1.Ingress](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete ingress event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -976,7 +967,7 @@ func (s *Service) testTriggerEventHandler(ctx context.Context) cache.ResourceEve
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceTrigger, t.Name))
 		},
 		DeleteFunc: func(obj interface{}) {
-			t, ok := obj.(*testtriggersv1.TestTrigger)
+			t, ok := unwrapDeletedObject[*testtriggersv1.TestTrigger](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete testtrigger event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -1080,7 +1071,7 @@ func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWebhook, webhook.Name))
 		},
 		DeleteFunc: func(obj interface{}) {
-			webhook, ok := obj.(*executorv1.Webhook)
+			webhook, ok := unwrapDeletedObject[*executorv1.Webhook](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete webhook event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -1122,7 +1113,7 @@ func (s *Service) webhookTemplateEventHandler() cache.ResourceEventHandlerFuncs 
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWebhookTemplate, webhookTemplate.Name))
 		},
 		DeleteFunc: func(obj interface{}) {
-			webhookTemplate, ok := obj.(*executorv1.WebhookTemplate)
+			webhookTemplate, ok := unwrapDeletedObject[*executorv1.WebhookTemplate](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete webhook template event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -1188,7 +1179,7 @@ func (s *Service) configMapEventHandler(ctx context.Context) cache.ResourceEvent
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			configMap, ok := obj.(*corev1.ConfigMap)
+			configMap, ok := unwrapDeletedObject[*corev1.ConfigMap](obj)
 			if !ok {
 				s.logger.Errorf("failed to process delete config map event due to it being an unexpected type, received type %+v", obj)
 				return
@@ -1200,4 +1191,17 @@ func (s *Service) configMapEventHandler(ctx context.Context) cache.ResourceEvent
 			}
 		},
 	}
+}
+
+func unwrapDeletedObject[T any](obj any) (T, bool) {
+	if v, ok := obj.(T); ok {
+		return v, true
+	}
+	if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+		if v, ok := tombstone.Obj.(T); ok {
+			return v, true
+		}
+	}
+	var zero T
+	return zero, false
 }
