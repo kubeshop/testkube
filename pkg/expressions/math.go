@@ -200,17 +200,58 @@ func (s *math) Type() Type {
 	}
 }
 
-func (s *math) itemString(v Expression) string {
+func (s *math) itemString(v Expression, right bool) string {
 	if vv, ok := v.(*math); ok {
-		if getOperatorPriority(vv.operator) >= getOperatorPriority(s.operator) && (vv.operator != operatorAdd || v.Type() == vv.left.Type()) {
+		priority, itemPriority := getOperatorPriority(s.operator), getOperatorPriority(vv.operator)
+		// The parser is left-associative, so an operand on the right with the same priority
+		// keeps its parentheses, unless both sides use the same operator and the grouping
+		// doesn't change the result: a-(b-c) is not a-b-c, and a&&(b||c) is not a&&b||c.
+		flatAtSamePriority := !right || (vv.operator == s.operator && isAssociative(s.operator) &&
+			(s.operator != operatorAdd || sameAddKind(s.left, vv.left, vv.right)))
+		if (itemPriority > priority || (itemPriority == priority && flatAtSamePriority)) &&
+			(vv.operator != operatorAdd || v.Type() == vv.left.Type()) {
 			return v.String()
 		}
 	}
 	return v.SafeString()
 }
 
+// sameAddKind tells if a+(b+c) can be printed as a+b+c. + also joins strings, so 'x'+(1+2)
+// is "x3" while 'x'+1+2 is "x12": that only holds when all operands are known numbers, or
+// all are strings.
+func sameAddKind(items ...Expression) bool {
+	numbers, texts := 0, 0
+	for _, v := range items {
+		if isKnownNumber(v) {
+			numbers++
+		} else if v.Type() == TypeString {
+			texts++
+		}
+	}
+	return numbers == len(items) || texts == len(items)
+}
+
+// isKnownNumber tells if v always gives a number. A sum reports TypeFloat64 whenever
+// neither side is a string type, also for operands of unknown type, and those sums join
+// strings at runtime, so a sum only counts when both of its sides do.
+func isKnownNumber(v Expression) bool {
+	if vv, ok := v.(*math); ok && vv.operator == operatorAdd {
+		return isKnownNumber(vv.left) && isKnownNumber(vv.right)
+	}
+	t := v.Type()
+	return t == TypeInt64 || t == TypeFloat64
+}
+
+func isAssociative(op operator) bool {
+	switch op {
+	case operatorAdd, operatorMultiply, operatorAnd, operatorOr:
+		return true
+	}
+	return false
+}
+
 func (s *math) String() string {
-	return s.itemString(s.left) + string(s.operator) + s.itemString(s.right)
+	return s.itemString(s.left, false) + string(s.operator) + s.itemString(s.right, true)
 }
 
 func (s *math) SafeString() string {
