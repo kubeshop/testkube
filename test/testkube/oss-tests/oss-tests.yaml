@@ -2,6 +2,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
 metadata:
   name: oss-tests-setup-template
+  annotations:
+    testkube.io/description: "Template that installs the Testkube CLI and jq and authenticates to Google Cloud, for the OSS tests."
 spec:
   job:
     activeDeadlineSeconds: 600
@@ -43,6 +45,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
 metadata:
   name: oss-tests-steps-template
+  annotations:
+    testkube.io/description: "Template that runs Postman, curl and JUnit workflows on an OSS installation, downloads artifacts, and checks that suites and parallel steps hit the OSS limits."
 spec:
   config:
     namespace:
@@ -85,6 +89,8 @@ metadata:
     core-tests: workflows
     tool: testkube-oss
     environment-specific: dev
+  annotations:
+    testkube.io/description: "Checks that a Testkube OSS installation with MongoDB runs workflows, serves artifacts and enforces the OSS limits; it runs only at .dev."
 description: Testkube OSS tests (standard installation - Mongo)
 spec:
   use:
@@ -107,6 +113,8 @@ metadata:
     core-tests: workflows
     tool: testkube-oss
     environment-specific: dev
+  annotations:
+    testkube.io/description: "Checks that a Testkube OSS installation with PostgreSQL runs workflows, serves artifacts and enforces the OSS limits; it runs only at .dev."
 description: Testkube OSS tests (PostgreSQL)
 spec:
   use:
