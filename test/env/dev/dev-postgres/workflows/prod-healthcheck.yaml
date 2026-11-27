@@ -18,8 +18,16 @@ spec:
                   values: ["true"]
   system:
     pureByDefault: true
+  timeouts:
+    # Bound the gap between job start and the first step container, so a scheduling or
+    # image-pull problem aborts with the cause Kubernetes reported instead of being
+    # swallowed by activeDeadlineSeconds, which budgets 90s for it.
+    initialization: 90s
   job:
-    activeDeadlineSeconds: 180
+    # 30s telemetry, 2x1m set context and 2x3m on the remote run is 8m30s (a retry still
+    # follows a non-zero exit just under the timeout), 90s for initialization, and a minute
+    # of slack for teardown.
+    activeDeadlineSeconds: 660
   container:
     image: kubeshop/testkube-cli:latest
     resources:
@@ -42,15 +50,32 @@ spec:
           secretKeyRef:
             name: testkube-agent-secrets
             key: TESTKUBE-CLOUD-TEST-BASIC-ENV-ID
+  # A transient container I/O error in the runner pod ("/.tktw/bin/sh: testkube: I/O error",
+  # 2026-11-16) fails a step without prod being involved, and this alert reads as a prod
+  # outage. One retry per step keeps that out of the channel; a real outage still fails both
+  # attempts. Every step carries its own timeout: the runtime only retries a timed-out step
+  # when the timeout is the step's own, and an unbounded step would otherwise run until the
+  # job deadline. activeDeadlineSeconds covers both attempts plus scheduling and image pull.
   steps:
   - name: Disable telemetry (optional)
     optional: true
+    timeout: 30s
     shell: testkube disable telemetry
   - name: Set context
+    retry:
+      count: 1
+    timeout: 1m
     shell: |
       testkube set context \
         --api-key {{ shellquote(env.apiToken) }} \
         --org-id {{ shellquote(env.organizationId) }} \
         --env-id {{ shellquote(env.environmentId) }}
   - name: Run remote workflow
+    retry:
+      count: 1
+      # Retry the fast failures this alert is about, not a timeout. On a timeout the runtime
+      # only kills the local CLI: the remote execution it was following keeps running, so a
+      # retry would add a second one in the target environment on every cron tick.
+      until: 'passed || status == "timeout"'
+    timeout: 3m
     shell: testkube run tw postman-workflow-smoke -f
