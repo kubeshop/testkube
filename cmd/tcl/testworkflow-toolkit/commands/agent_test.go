@@ -146,6 +146,13 @@ func TestAgentStep_Run(t *testing.T) {
 			wantAnswer:  "All suites passed.",
 		},
 		{
+			name:        "takes the outputs of a turn that ended on the tool and gave no text",
+			outputs:     map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
+			toolOutputs: true,
+			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Outputs: `{"verdict": "go"}`}},
+			wantOutputs: map[string]string{"verdict": "go"},
+		},
+		{
 			name:    "fails for an answer with no valid outputs, and writes the answer and the defaults",
 			outputs: map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
 			start:   agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: working, SessionId: "session-1", Next: 0}},

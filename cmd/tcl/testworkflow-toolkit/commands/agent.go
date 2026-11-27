@@ -270,9 +270,12 @@ func (s *agentStep) printText(text string) {
 // first, so a person reads the answer also when its outputs are not valid.
 func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testworkflowsv1.ParameterSchema) error {
 	answer := plainText(turn.GetAnswer())
-	path := filepath.Join(s.resultsDir, agentResponseFile)
-	if err := writeStepFile(path, answer); err != nil {
-		return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
+	// A turn can end on the outputs tool with no text. It then has no answer file, so
+	// step.<id>.agent.responseFile has no value, and a later step does not read an empty file.
+	if strings.TrimSpace(answer) != "" {
+		if err := writeStepFile(filepath.Join(s.resultsDir, agentResponseFile), answer); err != nil {
+			return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
+		}
 	}
 	// The log shows what the AI Agent returned. The answer is the last text of the turn, so the
 	// events print it, but a turn whose events the control plane cannot read has only the answer.
