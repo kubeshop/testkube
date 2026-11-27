@@ -45,7 +45,8 @@
 //   - agent_outputs.go gives the outputs that the step declares under `outputs`. Each one has
 //     the schema of a config parameter. The command adds a contract to the prompt: the answer
 //     ends with a fenced block with the language testkube-outputs that holds one JSON object.
-//     The command reads the last block, checks each field against its schema, and writes each
+//     The command reads the last block only when no text follows it, because an earlier block
+//     can be a quote from a tool. It checks each field against its schema, and writes each
 //     value as a step output, so a later step reads step.<id>.outputs.<name>. A value is text,
 //     a number or a boolean; a list and an object fail. A field that the answer does not have
 //     takes its default.

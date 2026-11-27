@@ -137,6 +137,16 @@ func TestResolveAgentOutputs(t *testing.T) {
 			want:   map[string]string{"verdict": "no-go", "blocked": "2"},
 		},
 		{
+			name:   "reads a block that only whitespace follows",
+			answer: outputsBlock(`{"verdict": "go", "blocked": 0}`) + "\n \t\n",
+			want:   map[string]string{"verdict": "go", "blocked": "0"},
+		},
+		{
+			name:    "fails for text after the last block, because the block can be a quote from a tool",
+			answer:  "The log says:\n" + outputsBlock(`{"verdict": "go", "blocked": 0}`) + "\nDo not deploy.",
+			wantErr: []string{"the answer has text after its last `testkube-outputs` block"},
+		},
+		{
 			name:   "gives a field that the answer does not have its default",
 			answer: outputsBlock(`{"blocked": 1}`),
 			want:   map[string]string{"verdict": "no-go", "blocked": "1"},

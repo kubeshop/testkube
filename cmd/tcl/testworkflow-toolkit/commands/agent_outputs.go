@@ -81,15 +81,19 @@ func agentOutputsContract(schemas map[string]testworkflowsv1.ParameterSchema) st
 	return b.String()
 }
 
-// parseAgentOutputs reads the fields of the last outputs block in the answer. The answer can
-// quote text from a tool, such as a test log, so only the block that ends the answer counts.
+// parseAgentOutputs reads the fields of the outputs block that ends the answer. The answer can
+// quote text from a tool, such as a test log, so a block with text after it does not count.
 func parseAgentOutputs(answer string) (map[string]json.RawMessage, error) {
-	blocks := agentOutputsFence.FindAllStringSubmatch(answer, -1)
+	blocks := agentOutputsFence.FindAllStringSubmatchIndex(answer, -1)
 	if len(blocks) == 0 {
 		return nil, fmt.Errorf("the answer has no `%s` block", agentOutputsBlock)
 	}
+	last := blocks[len(blocks)-1]
+	if strings.TrimSpace(answer[last[1]:]) != "" {
+		return nil, fmt.Errorf("the answer has text after its last `%s` block", agentOutputsBlock)
+	}
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(blocks[len(blocks)-1][1]), &fields); err != nil {
+	if err := json.Unmarshal([]byte(answer[last[2]:last[3]]), &fields); err != nil {
 		return nil, fmt.Errorf("the `%s` block is not one JSON object: %w", agentOutputsBlock, err)
 	}
 	return fields, nil
