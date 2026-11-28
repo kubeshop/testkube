@@ -9,7 +9,7 @@ helm plugin install https://github.com/helm-unittest/helm-unittest.git  # once
 helm unittest k8s/helm/testkube-runner
 ```
 
-Expected: `Test Suites: 8 passed, 8 total` / `Tests: 75 passed`.
+Expected: `Test Suites: 8 passed, 8 total` / `Tests: 92 passed`.
 
 ## Suites
 
@@ -19,9 +19,9 @@ Expected: `Test Suites: 8 passed, 8 total` / `Tests: 75 passed`.
 | `servicemonitor_test.yaml` | `servicemonitor.yaml` | 13 | gating by `prometheus.enabled`, targetPort sync with Service, interval/monitoringLabels/matchLabels/sampleLimit |
 | `serviceaccount_test.yaml` | `serviceaccount.yaml` | 8 | auto-create branches (`pod.serviceAccount.autoCreate`, `execution.default.serviceAccount.autoCreate`), name/namespace overrides, annotations |
 | `poddisruptionbudget_test.yaml` | `poddisruptionbudget.yaml` | 7 | local vs `global.podDisruptionBudget` fallback, `minAvailable`/`maxUnavailable`, selector, K8s ≥1.21 apiVersion |
-| `role_test.yaml` | `role.yaml` | 10 | the 4 base Roles + watchers ClusterRole/Role per `watchAllNamespaces`; gating via `listener.enabled` / `gitops.enabled` |
-| `rolebinding_test.yaml` | `rolebinding.yaml` | 10 | RoleBinding subjects + roleRef wiring (`agent-sa` → exec-role for jobs, `exec-sa` → exec-role), namespace propagation, watchers ClusterRoleBinding |
-| `deployment_test.yaml` | `deployment.yaml` | 15 | port 8088, ServiceAccount, runner credentials (inline & via secretRef), TLS, listener/gitops toggles, registration token, image references |
+| `role_test.yaml` | `role.yaml` | 15 | the 4 base Roles + watchers ClusterRole/Role per `watchAllNamespaces`; gating via `listener.enabled` / `gitops.enabled`, watchers Role per `gitops.namespaces` and ClusterRole per `gitops.watchAllNamespaces` |
+| `rolebinding_test.yaml` | `rolebinding.yaml` | 14 | RoleBinding subjects + roleRef wiring (`agent-sa` → exec-role for jobs, `exec-sa` → exec-role), namespace propagation, watchers ClusterRoleBinding, watchers RoleBinding per `gitops.namespaces` |
+| `deployment_test.yaml` | `deployment.yaml` | 23 | port 8088, ServiceAccount, runner credentials (inline & via secretRef), TLS, listener/gitops toggles, registration token, image references, `GITOPS_NAMESPACES` and `GITOPS_EXECUTE_IN_SOURCE_NAMESPACE` |
 | `crds_test.yaml` | `crds.yaml` | 1 | CRDs are rendered when `gitops.enabled && gitops.installCRD` |
 
 CI does not run these yet — they are local-dev guardrails. Wiring into a workflow is a separate follow-up.
