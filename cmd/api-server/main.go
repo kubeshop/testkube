@@ -980,6 +980,7 @@ func main() {
 						WatcherNamespaces:   informerWatcherNamespaces,
 						KubeClient:          clientset,
 						GitHubTokenProvider: client,
+						AllowedGitHosts:     cfg.TestTriggerGitInformerAllowedGitHosts,
 					}).Reconcile(taskCtx)
 					return nil
 				},
