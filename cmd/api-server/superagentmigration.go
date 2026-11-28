@@ -52,8 +52,11 @@ func skipRejectedResource(log superAgentMigrationLogger, kind, name string, err 
 	}
 
 	msg := "resource is owned by another GitOps agent, skipping it during SuperAgent migration. It will not be present in the Control Plane until its ownership is resolved."
-	if errors.Is(err, syncagent.ErrInvalidResource) {
+	switch {
+	case errors.Is(err, syncagent.ErrInvalidResource):
 		msg = "the Control Plane rejected the resource as invalid, skipping it during SuperAgent migration. It will not be present in the Control Plane until the resource is fixed."
+	case errors.Is(err, syncagent.ErrEnvironmentForbidden):
+		msg = "the Control Plane refused the Environment for this agent, skipping it during SuperAgent migration. Check GITOPS_NAMESPACES."
 	}
 	log.Errorw(msg, kind, name, "error", err.Error())
 
@@ -61,11 +64,11 @@ func skipRejectedResource(log superAgentMigrationLogger, kind, name string, err 
 }
 
 type superAgentMigrationSyncStore interface {
-	UpdateOrCreateTestTrigger(context.Context, testtriggersv1.TestTrigger) error
-	UpdateOrCreateTestWorkflow(context.Context, testworkflowsv1.TestWorkflow) error
-	UpdateOrCreateTestWorkflowTemplate(context.Context, testworkflowsv1.TestWorkflowTemplate) error
-	UpdateOrCreateWebhook(context.Context, executorv1.Webhook) error
-	UpdateOrCreateWebhookTemplate(context.Context, executorv1.WebhookTemplate) error
+	UpdateOrCreateTestTrigger(context.Context, syncagent.Target, testtriggersv1.TestTrigger) error
+	UpdateOrCreateTestWorkflow(context.Context, syncagent.Target, testworkflowsv1.TestWorkflow) error
+	UpdateOrCreateTestWorkflowTemplate(context.Context, syncagent.Target, testworkflowsv1.TestWorkflowTemplate) error
+	UpdateOrCreateWebhook(context.Context, syncagent.Target, executorv1.Webhook) error
+	UpdateOrCreateWebhookTemplate(context.Context, syncagent.Target, executorv1.WebhookTemplate) error
 }
 
 // migrateSuperAgent checks to see whether the current agent is a super agent and runs migration if so.
@@ -182,7 +185,7 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			// the Control Plane cannot be correctly called the Source of Truth.
 			for _, t := range testTriggerList.Items {
 				for {
-					if err := syncStore.UpdateOrCreateTestTrigger(ctx, t); err != nil {
+					if err := syncStore.UpdateOrCreateTestTrigger(ctx, syncagent.Target{Namespace: cfg.namespace}, t); err != nil {
 						if skipRejectedResource(log, "TestTrigger", t.Name, err) {
 							break
 						}
@@ -202,7 +205,7 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			// can be resolved when the Control Plane processes workflow inserts.
 			for _, t := range testWorkflowTemplateList.Items {
 				for {
-					if err := syncStore.UpdateOrCreateTestWorkflowTemplate(ctx, t); err != nil {
+					if err := syncStore.UpdateOrCreateTestWorkflowTemplate(ctx, syncagent.Target{Namespace: cfg.namespace}, t); err != nil {
 						if skipRejectedResource(log, "TestWorkflowTemplate", t.Name, err) {
 							break
 						}
@@ -220,7 +223,7 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			b.Reset()
 			for _, t := range testWorkflowList.Items {
 				for {
-					if err := syncStore.UpdateOrCreateTestWorkflow(ctx, t); err != nil {
+					if err := syncStore.UpdateOrCreateTestWorkflow(ctx, syncagent.Target{Namespace: cfg.namespace}, t); err != nil {
 						if skipRejectedResource(log, "TestWorkflow", t.Name, err) {
 							break
 						}
@@ -238,7 +241,7 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			b.Reset()
 			for _, t := range webhookList.Items {
 				for {
-					if err := syncStore.UpdateOrCreateWebhook(ctx, t); err != nil {
+					if err := syncStore.UpdateOrCreateWebhook(ctx, syncagent.Target{Namespace: cfg.namespace}, t); err != nil {
 						if skipRejectedResource(log, "Webhook", t.Name, err) {
 							break
 						}
@@ -256,7 +259,7 @@ func migrateSuperAgent(ctx context.Context, log superAgentMigrationLogger, cfg s
 			b.Reset()
 			for _, t := range webhookTemplateList.Items {
 				for {
-					if err := syncStore.UpdateOrCreateWebhookTemplate(ctx, t); err != nil {
+					if err := syncStore.UpdateOrCreateWebhookTemplate(ctx, syncagent.Target{Namespace: cfg.namespace}, t); err != nil {
 						if skipRejectedResource(log, "WebhookTemplate", t.Name, err) {
 							break
 						}

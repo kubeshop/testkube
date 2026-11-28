@@ -56,18 +56,41 @@ func TestGitOpsNamespaces_WatchesAllAndNames(t *testing.T) {
 	}
 }
 
+func TestGitOpsNamespaces_EnvironmentID(t *testing.T) {
+	namespaces := GitOpsNamespaces{{Name: "*"}, {Name: "a"}, {Name: "b", EnvID: "env-1"}, {Name: "c", EnvID: "env-token"}}
+	tests := []struct {
+		name      string
+		namespace string
+		want      string
+	}{
+		{name: "a mapped namespace syncs into its Environment", namespace: "b", want: "env-1"},
+		{name: "an unmapped namespace syncs into the default Environment", namespace: "a", want: ""},
+		{name: "a namespace under * syncs into the default Environment", namespace: "other", want: ""},
+		{name: "a namespace mapped to the token Environment syncs into the default Environment", namespace: "c", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, namespaces.EnvironmentID(tt.namespace, "env-token"))
+		})
+	}
+}
+
 func TestValidateGitOpsNamespaces(t *testing.T) {
 	const agentNamespace = "testkube"
+	proContext := func(capability bool) ProContext {
+		return ProContext{
+			// EnvID is TESTKUBE_PRO_ENV_ID, which ReadProContext keeps over the token Environment.
+			EnvID:      "env-configured",
+			TokenEnvID: "env-token",
+			Agent:      ProContextAgent{Environments: []ProContextAgentEnvironment{{ID: "env-token"}, {ID: "env-other"}}},
+			MultiNamespaceSyncSupportedInControlPlane: capability,
+		}
+	}
 	tests := []struct {
 		name       string
 		namespaces GitOpsNamespaces
 		capability bool
-		// envOverride is TESTKUBE_PRO_ENV_ID, which ReadProContext keeps as EnvID over the
-		// Environment of the token.
-		envOverride string
-		// syncEnvID is the Environment the Control Plane reports for the token; "-" means none.
-		syncEnvID string
-		wantErr   string
+		wantErr    string
 	}{
 		{name: "the agent namespace passes without the capability", namespaces: GitOpsNamespaces{{Name: agentNamespace}}},
 		{name: "the token Environment passes without the capability", namespaces: GitOpsNamespaces{{Name: agentNamespace, EnvID: "env-token"}}},
@@ -79,7 +102,7 @@ func TestValidateGitOpsNamespaces(t *testing.T) {
 			wantErr:    `GITOPS_NAMESPACES: namespace "team-a" is not the agent namespace "testkube", but the Control Plane lacks the sync-multi-namespace capability`,
 		},
 		{
-			name:       "two namespaces without the capability fail",
+			name:       "two namespaces in one Environment without the capability fail",
 			namespaces: GitOpsNamespaces{{Name: agentNamespace}, {Name: "team-b", EnvID: "env-token"}},
 			wantErr:    `GITOPS_NAMESPACES: namespace "team-b" is not the agent namespace "testkube", but the Control Plane lacks the sync-multi-namespace capability`,
 		},
@@ -90,51 +113,30 @@ func TestValidateGitOpsNamespaces(t *testing.T) {
 		},
 		{name: "one other namespace with the capability passes", namespaces: GitOpsNamespaces{{Name: "team-a"}}, capability: true},
 		{name: "several namespaces and * with the capability pass", namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "b"}, {Name: "*"}}, capability: true},
-		{name: "the token Environment passes with the capability", namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-token"}, {Name: "b"}}, capability: true},
-		// The sync client sends every request into the Environment of the token, so a namespace
-		// mapped to another one would sync there instead of where it says.
+		{name: "a known envId with the capability passes", namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "b", EnvID: "env-other"}}, capability: true},
 		{
-			name:       "another Environment fails, with the capability",
-			namespaces: GitOpsNamespaces{{Name: "a"}, {Name: "b", EnvID: "env-other"}},
-			capability: true,
-			wantErr:    `GITOPS_NAMESPACES: namespace "b" maps to Environment "env-other", but every namespace syncs into the Environment of the agent token, "env-token"`,
-		},
-		{
-			name:       "another Environment fails, without the capability",
+			name:       "a known envId without the capability fails and names the capability",
 			namespaces: GitOpsNamespaces{{Name: agentNamespace, EnvID: "env-other"}},
-			wantErr:    `GITOPS_NAMESPACES: namespace "testkube" maps to Environment "env-other", but every namespace syncs into the Environment of the agent token, "env-token"`,
+			wantErr:    `GITOPS_NAMESPACES: namespace "testkube" maps to Environment "env-other", but the Control Plane lacks the sync-multi-namespace capability`,
 		},
 		{
-			name:        "a TESTKUBE_PRO_ENV_ID override does not move the sync Environment",
-			namespaces:  GitOpsNamespaces{{Name: "team-b", EnvID: "env-other"}},
-			capability:  true,
-			envOverride: "env-other",
-			wantErr:     `GITOPS_NAMESPACES: namespace "team-b" maps to Environment "env-other", but every namespace syncs into the Environment of the agent token, "env-token"`,
+			name:       "an unknown envId fails and lists the known Environments",
+			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-missing"}},
+			capability: true,
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-missing", which is not an Environment of the agent (known: env-token, env-other)`,
 		},
+		// A sync request without the environment-id header lands in the token Environment, not in
+		// TESTKUBE_PRO_ENV_ID, so a mapping to that Environment is checked like any other.
 		{
-			name:       "a mapping fails when the Control Plane reports no Environment",
-			namespaces: GitOpsNamespaces{{Name: agentNamespace, EnvID: "env-token"}},
-			syncEnvID:  "-",
-			wantErr:    `GITOPS_NAMESPACES: namespace "testkube" maps to Environment "env-token", but the Control Plane reported no Environment for the agent token to check it against`,
+			name:       "the configured EnvID is not the token Environment",
+			namespaces: GitOpsNamespaces{{Name: "a", EnvID: "env-configured"}},
+			capability: true,
+			wantErr:    `GITOPS_NAMESPACES: namespace "a" maps to Environment "env-configured", which is not an Environment of the agent (known: env-token, env-other)`,
 		},
-		{name: "no mapping passes when the Control Plane reports no Environment", namespaces: GitOpsNamespaces{{Name: agentNamespace}}, syncEnvID: "-"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			syncEnvID := "env-token"
-			if tt.syncEnvID == "-" {
-				syncEnvID = ""
-			}
-			envID := syncEnvID
-			if tt.envOverride != "" {
-				envID = tt.envOverride
-			}
-			proContext := ProContext{
-				EnvID:             envID,
-				ControlPlaneEnvID: syncEnvID,
-				MultiNamespaceSyncSupportedInControlPlane: tt.capability,
-			}
-			err := ValidateGitOpsNamespaces(tt.namespaces, agentNamespace, proContext)
+			err := ValidateGitOpsNamespaces(tt.namespaces, agentNamespace, proContext(tt.capability))
 			if tt.wantErr == "" {
 				assert.NoError(t, err)
 				return

@@ -14,6 +14,8 @@ func TestIsRejection(t *testing.T) {
 	}{
 		{name: "an ownership conflict never clears by retry", err: fmt.Errorf("sync: %w", ErrOwnershipConflict), want: true},
 		{name: "an invalid resource never clears by retry", err: fmt.Errorf("sync: %w", ErrInvalidResource), want: true},
+		{name: "a forbidden Environment never clears by retry", err: fmt.Errorf("sync: %w", ErrEnvironmentForbidden), want: true},
+		{name: "a name collision never clears by retry", err: fmt.Errorf("sync: %w", ErrNameCollision), want: true},
 		{name: "any other failure is retried", err: errors.New("connection refused")},
 	}
 	for _, tt := range tests {

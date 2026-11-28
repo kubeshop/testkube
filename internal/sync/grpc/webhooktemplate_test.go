@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
+	syncagent "github.com/kubeshop/testkube/internal/sync"
 )
 
 func TestUpdateOrCreateWebhookTemplate(t *testing.T) {
@@ -25,7 +26,7 @@ func TestUpdateOrCreateWebhookTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := client.UpdateOrCreateWebhookTemplate(t.Context(), input); err != nil {
+	if err := client.UpdateOrCreateWebhookTemplate(t.Context(), syncagent.Target{}, input); err != nil {
 		t.Fatal(err)
 	}
 

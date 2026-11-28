@@ -39,6 +39,19 @@ func (n GitOpsNamespaces) Names() []string {
 	return names
 }
 
+// EnvironmentID returns the Environment of the entry named namespace. It returns empty, the default
+// Environment, for a namespace without a mapping, such as one that only GitOpsAllNamespaces watches,
+// and for a namespace that maps to tokenEnvID. One Environment so has one value, and the name
+// collision check of the sync controllers sees two namespaces of the token Environment as one.
+func (n GitOpsNamespaces) EnvironmentID(namespace, tokenEnvID string) string {
+	for _, ns := range n {
+		if ns.Name == namespace && ns.EnvID != tokenEnvID {
+			return ns.EnvID
+		}
+	}
+	return ""
+}
+
 // ParseGitOpsNamespaces parses GITOPS_NAMESPACES. Entries are comma separated and trimmed, and
 // empty entries are ignored. An entry is ns, ns=<envId> or *. An empty value means
 // defaultNamespace in the default Environment.
@@ -75,31 +88,33 @@ func ParseGitOpsNamespaces(raw, defaultNamespace string) (GitOpsNamespaces, erro
 
 // ValidateGitOpsNamespaces checks GITOPS_NAMESPACES against the Control Plane.
 //
-// Every namespace syncs into the Environment the Control Plane reports for the agent token
-// (ProContext.ControlPlaneEnvID), not TESTKUBE_PRO_ENV_ID: the sync client sends neither updates
-// nor deletes with an Environment. So an entry mapped to another Environment fails rather than
-// syncing there silently, and so does any mapping when the Control Plane reports no Environment.
+// A namespace without a mapping, or mapped to it, syncs into the Environment of the agent token
+// (ProContext.TokenEnvID), not TESTKUBE_PRO_ENV_ID. A namespace mapped to another Environment syncs
+// there through the environment-id header, so that Environment must be one of the agent's, and the
+// Control Plane must have the sync-multi-namespace capability to read the header.
 //
-// The sync-multi-namespace capability is needed for any namespace other than defaultNamespace
+// The capability is also needed for any namespace other than defaultNamespace
 // (TESTKUBE_NAMESPACE), and so for several namespaces or *. Without it the Control Plane ignores
 // the namespace of a request: it keeps same-name resources of different namespaces together, and
 // it deletes in defaultNamespace while an update takes the namespace of its payload, so the
 // ownership check may refuse the delete of a resource synced from another namespace. Only
-// defaultNamespace passes without it, as before GITOPS_NAMESPACES.
+// defaultNamespace in the token Environment passes without it, as before GITOPS_NAMESPACES.
 func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, defaultNamespace string, proContext ProContext) error {
-	syncEnvID := proContext.ControlPlaneEnvID
+	capable := proContext.MultiNamespaceSyncSupportedInControlPlane
 	for _, ns := range namespaces {
-		if ns.EnvID == "" || ns.EnvID == syncEnvID {
+		if ns.EnvID == "" || ns.EnvID == proContext.TokenEnvID {
 			continue
 		}
-		if syncEnvID == "" {
-			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, but the Control Plane reported no Environment for the agent token to check it against",
+		if !agentHasEnvironment(proContext, ns.EnvID) {
+			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, which is not an Environment of the agent (known: %s)",
+				ns.Name, ns.EnvID, strings.Join(knownEnvironmentIDs(proContext), ", "))
+		}
+		if !capable {
+			return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, but the Control Plane lacks the sync-multi-namespace capability",
 				ns.Name, ns.EnvID)
 		}
-		return fmt.Errorf("GITOPS_NAMESPACES: namespace %q maps to Environment %q, but every namespace syncs into the Environment of the agent token, %q",
-			ns.Name, ns.EnvID, syncEnvID)
 	}
-	if proContext.MultiNamespaceSyncSupportedInControlPlane {
+	if capable {
 		return nil
 	}
 	for _, ns := range namespaces {
@@ -114,4 +129,27 @@ func ValidateGitOpsNamespaces(namespaces GitOpsNamespaces, defaultNamespace stri
 		}
 	}
 	return nil
+}
+
+// knownEnvironmentIDs lists the token Environment first, then the other Environments of the agent.
+func knownEnvironmentIDs(proContext ProContext) []string {
+	known := make([]string, 0, len(proContext.Agent.Environments)+1)
+	if proContext.TokenEnvID != "" {
+		known = append(known, proContext.TokenEnvID)
+	}
+	for _, env := range proContext.Agent.Environments {
+		if env.ID != proContext.TokenEnvID {
+			known = append(known, env.ID)
+		}
+	}
+	return known
+}
+
+func agentHasEnvironment(proContext ProContext, envID string) bool {
+	for _, env := range proContext.Agent.Environments {
+		if env.ID == envID {
+			return true
+		}
+	}
+	return false
 }

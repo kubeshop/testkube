@@ -88,14 +88,15 @@
 //     codes.PermissionDenied.
 //  3. Agent translation: translateError in grpc/errors.go maps FailedPrecondition onto the
 //     ErrOwnershipConflict sentinel in errors.go, keeping the original status in the error chain
-//     because its message names the current owner. Callers match on the sentinel so that no layer
-//     above the client depends on gRPC.
+//     because its message names the current owner, and PermissionDenied onto
+//     ErrEnvironmentForbidden. Callers match on the sentinel so that no layer above the client
+//     depends on gRPC.
 //  4. Reconciliation: terminalOnRejection in controller/errors.go wraps a rejection (an ownership
-//     conflict or an invalid resource, see syncagent.IsRejection) in reconcile.TerminalError so
-//     controller-runtime stops requeueing something no retry can fix, while every other error
-//     stays retryable with backoff. Rejections are deliberately not logged there:
-//     controller-runtime already logs whatever a reconciler returns, along with the kind and name
-//     of the resource.
+//     conflict, an invalid resource, a forbidden Environment or a name collision, see
+//     syncagent.IsRejection) in reconcile.TerminalError so controller-runtime stops requeueing
+//     something no retry can fix, while every other error stays retryable with backoff. Rejections
+//     are deliberately not logged there: controller-runtime already logs whatever a reconciler
+//     returns, along with the kind and name of the resource.
 //
 // skipRejectedResource in cmd/api-server/superagentmigration.go applies the same rule outside the
 // reconcilers, during SuperAgent migration. That migration retries sync failures forever by
@@ -112,16 +113,17 @@
 // per Environment.
 //
 // GITOPS_NAMESPACES sets the namespaces that the controller manager watches, comma separated. An
-// entry is ns, ns=<envId> or * (every namespace); empty means TESTKUBE_NAMESPACE.
-// config.ParseGitOpsNamespaces parses it. Every namespace syncs into the Environment the Control
-// Plane reports for the agent token, whatever TESTKUBE_PRO_ENV_ID says: the sync client sends no
-// Environment with an update or a delete, so with GitOps sync on the agent exits at startup when an
-// envId names any other Environment, whatever the Control Plane advertises. Without
-// sync-multi-namespace it also exits for any namespace other than TESTKUBE_NAMESPACE, and so for
-// several namespaces or *: such a Control Plane deletes in the agent namespace but updates in the
-// namespace of the payload, so its ownership check could refuse the delete of a resource synced
-// from another namespace (config.ValidateGitOpsNamespaces). The sync controllers send the
-// namespace of the resource on every delete. The manager runs with leader election unless
+// entry is ns, ns=<envId> (sync ns into that Environment) or * (every namespace); empty means
+// TESTKUBE_NAMESPACE. config.ParseGitOpsNamespaces parses it. A namespace without an envId syncs
+// into the Environment the Control Plane reports for the agent token (ProContext.TokenEnvID),
+// whatever TESTKUBE_PRO_ENV_ID says. With GitOps sync on, the agent exits at startup when an envId
+// is not an Environment of the agent. Without sync-multi-namespace it also exits when a namespace
+// maps to an Environment other than the one of the agent token, and for any namespace other than
+// TESTKUBE_NAMESPACE, so for several namespaces or *: such a Control Plane reads neither the
+// environment-id header nor the namespace of a request, and deletes in the agent namespace while
+// an update takes the namespace of its payload, so its ownership check could refuse the delete of
+// a resource synced from another namespace (config.ValidateGitOpsNamespaces). The sync
+// controllers send the namespace of the resource on every delete. The manager runs with leader election unless
 // LEADER_ELECTION_DISABLED is set, so one replica syncs; the lease is
 // testkube-controllers-<APIServerFullname> in TESTKUBE_NAMESPACE.
 //
@@ -143,6 +145,16 @@
 // additionalNamespaces of the testkube-api chart is not enough: the Role it renders there covers
 // only the trigger watchers' built-in kinds. Add the six kinds with rbac.extraWatchedResources,
 // which that Role includes, or grant them with a Role or ClusterRole of your own.
+//
+// A store call takes a Target (target.go): the namespace of the resource and the Environment that
+// config.GitOpsNamespaces.EnvironmentID maps it to, empty for the Environment of the agent token.
+// The grpc client puts the namespace on every update and delete. It sends the environment-id
+// header only for an Environment other than the one of the agent token, because a Control Plane
+// without sync-multi-namespace refuses the header. It adds the label SourceNamespaceLabel
+// (testkube.io/source-namespace) to a copy of each resource it sends, so the Kubernetes object in
+// the cache stays unchanged. The Control Plane keys a resource by its name in an Environment, so
+// the controller package refuses a second resource with the same name from another namespace of
+// the same Environment (ErrNameCollision); the controller package documents the rule.
 //
 // The Control Plane side lives in testkube-cloud-api: it persists the owner on the six syncable
 // tables and enforces it in internal/sync/ownership.go, on every Upsert and Delete path.

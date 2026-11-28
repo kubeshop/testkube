@@ -354,9 +354,12 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		return proContext, fmt.Errorf("cannot get pro context: %v", err)
 	}
 
-	proContext.ControlPlaneEnvID = foundProContext.EnvId
 	if proContext.EnvID == "" {
 		proContext.EnvID = foundProContext.EnvId
+	}
+	proContext.TokenEnvID = foundProContext.EnvId
+	if proContext.TokenEnvID == "" {
+		proContext.TokenEnvID = proContext.EnvID
 	}
 
 	if proContext.Agent.ID == "" && strings.HasPrefix(proContext.APIKey, "tkcagnt_") {
