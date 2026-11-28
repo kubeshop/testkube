@@ -18,7 +18,7 @@ func (s NoOpStore) UpdateOrCreateTestTrigger(_ context.Context, _ testtriggersv1
 	return nil
 }
 
-func (s NoOpStore) DeleteTestTrigger(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteTestTrigger(_ context.Context, _, _ string) error {
 	return nil
 }
 
@@ -26,7 +26,7 @@ func (s NoOpStore) UpdateOrCreateWorkflowTrigger(_ context.Context, _ workflowtr
 	return nil
 }
 
-func (s NoOpStore) DeleteWorkflowTrigger(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteWorkflowTrigger(_ context.Context, _, _ string) error {
 	return nil
 }
 
@@ -34,7 +34,7 @@ func (s NoOpStore) UpdateOrCreateTestWorkflow(_ context.Context, _ testworkflows
 	return nil
 }
 
-func (s NoOpStore) DeleteTestWorkflow(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteTestWorkflow(_ context.Context, _, _ string) error {
 	return nil
 }
 
@@ -42,7 +42,7 @@ func (s NoOpStore) UpdateOrCreateTestWorkflowTemplate(_ context.Context, _ testw
 	return nil
 }
 
-func (s NoOpStore) DeleteTestWorkflowTemplate(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteTestWorkflowTemplate(_ context.Context, _, _ string) error {
 	return nil
 }
 
@@ -50,7 +50,7 @@ func (s NoOpStore) UpdateOrCreateWebhook(_ context.Context, _ executorv1.Webhook
 	return nil
 }
 
-func (s NoOpStore) DeleteWebhook(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteWebhook(_ context.Context, _, _ string) error {
 	return nil
 }
 
@@ -58,6 +58,6 @@ func (s NoOpStore) UpdateOrCreateWebhookTemplate(_ context.Context, _ executorv1
 	return nil
 }
 
-func (s NoOpStore) DeleteWebhookTemplate(_ context.Context, _ string) error {
+func (s NoOpStore) DeleteWebhookTemplate(_ context.Context, _, _ string) error {
 	return nil
 }
