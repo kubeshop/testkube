@@ -10,9 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/cache"
 
+	executorv1 "github.com/kubeshop/testkube/api/executor/v1"
 	testtriggersv1 "github.com/kubeshop/testkube/api/testtriggers/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	intconfig "github.com/kubeshop/testkube/internal/config"
@@ -586,4 +591,183 @@ func TestService_getWorkflowTriggerWatchNamespaces(t *testing.T) {
 		s := &Service{watcherNamespaces: []string{"*", "team-a", "*", "team-a"}}
 		assert.Equal(t, []string{metav1.NamespaceAll}, s.getWorkflowTriggerWatchNamespaces())
 	})
+}
+
+func TestUnwrapDeletedObject(t *testing.T) {
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "pod-1"}}
+
+	t.Run("returns direct object", func(t *testing.T) {
+		got, ok := unwrapDeletedObject[*corev1.Pod](pod)
+		require.True(t, ok)
+		assert.Same(t, pod, got)
+	})
+
+	t.Run("unwraps DeletedFinalStateUnknown tombstone", func(t *testing.T) {
+		got, ok := unwrapDeletedObject[*corev1.Pod](cache.DeletedFinalStateUnknown{
+			Key: "ns/pod-1",
+			Obj: pod,
+		})
+		require.True(t, ok)
+		assert.Same(t, pod, got)
+	})
+
+	t.Run("rejects tombstone with unexpected object type", func(t *testing.T) {
+		got, ok := unwrapDeletedObject[*corev1.Pod](cache.DeletedFinalStateUnknown{
+			Key: "ns/pod-1",
+			Obj: &corev1.Service{},
+		})
+		assert.False(t, ok)
+		assert.Nil(t, got)
+	})
+
+	t.Run("rejects unexpected object type", func(t *testing.T) {
+		got, ok := unwrapDeletedObject[*corev1.Pod]("not-a-pod")
+		assert.False(t, ok)
+		assert.Nil(t, got)
+	})
+}
+
+func TestService_eventHandlers_deleteTombstone(t *testing.T) {
+	namespace := "testkube"
+	clientset := fake.NewClientset()
+	testKubeClientset := faketestkube.NewSimpleClientset()
+	eventsBus := bus.NewEventBusMock()
+	published := make(chan testkube.Event, 10)
+	require.NoError(t, eventsBus.Subscribe("test-queue", func(e testkube.Event) error {
+		published <- e
+		return nil
+	}))
+
+	service := newWatcherTestService(clientset, testKubeClientset, namespace)
+	service.eventsBus = eventsBus
+	ctx := context.Background()
+
+	trigger := &testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "trigger-1"},
+		Spec:       testtriggersv1.TestTriggerSpec{Resource: "pod", Event: "created"},
+	}
+	service.addTrigger(ctx, trigger)
+	require.Len(t, service.triggerStatus, 1)
+
+	service.testTriggerEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{
+		Key: namespace + "/trigger-1",
+		Obj: trigger,
+	})
+	assert.Empty(t, service.triggerStatus)
+
+	select {
+	case ev := <-published:
+		assert.Equal(t, testkube.EventDeleted, ev.Type_)
+		assert.Equal(t, testkube.EventResourceTrigger, ev.Resource)
+		assert.Equal(t, "trigger-1", ev.ResourceId)
+	case <-time.After(time.Second):
+		t.Fatal("expected deleted trigger event to be published")
+	}
+
+	webhook := &executorv1.Webhook{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "webhook-1"}}
+	service.webhookEventHandler().DeleteFunc(cache.DeletedFinalStateUnknown{
+		Key: namespace + "/webhook-1",
+		Obj: webhook,
+	})
+	select {
+	case ev := <-published:
+		assert.Equal(t, testkube.EventDeleted, ev.Type_)
+		assert.Equal(t, testkube.EventResourceWebhook, ev.Resource)
+		assert.Equal(t, "webhook-1", ev.ResourceId)
+	case <-time.After(time.Second):
+		t.Fatal("expected deleted webhook event to be published")
+	}
+
+	webhookTemplate := &executorv1.WebhookTemplate{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "webhook-tpl-1"}}
+	service.webhookTemplateEventHandler().DeleteFunc(cache.DeletedFinalStateUnknown{
+		Key: namespace + "/webhook-tpl-1",
+		Obj: webhookTemplate,
+	})
+	select {
+	case ev := <-published:
+		assert.Equal(t, testkube.EventDeleted, ev.Type_)
+		assert.Equal(t, testkube.EventResourceWebhookTemplate, ev.Resource)
+		assert.Equal(t, "webhook-tpl-1", ev.ResourceId)
+	case <-time.After(time.Second):
+		t.Fatal("expected deleted webhook template event to be published")
+	}
+
+	// Verify resource handlers unwrap tombstones and trigger matching delete executions.
+	var executed []string
+	service.triggerExecutor = func(_ context.Context, e *watcherEvent, t *internalTrigger) error {
+		executed = append(executed, fmt.Sprintf("%s:%s:%s", t.Name, e.resource, e.eventType))
+		return nil
+	}
+
+	metaObj := metav1.ObjectMeta{Namespace: namespace, Name: "res-1"}
+	resourceCases := []struct {
+		name     string
+		resource testtriggersv1.TestTriggerResource
+		handler  cache.ResourceEventHandlerFuncs
+		obj      any
+	}{
+		{
+			name:     "pod",
+			resource: testtriggersv1.TestTriggerResourcePod,
+			handler:  service.podEventHandler(ctx),
+			obj:      &corev1.Pod{ObjectMeta: metaObj},
+		},
+		{
+			name:     "deployment",
+			resource: testtriggersv1.TestTriggerResourceDeployment,
+			handler:  service.deploymentEventHandler(ctx),
+			obj:      &appsv1.Deployment{ObjectMeta: metaObj},
+		},
+		{
+			name:     "statefulset",
+			resource: testtriggersv1.TestTriggerResourceStatefulSet,
+			handler:  service.statefulSetEventHandler(ctx),
+			obj:      &appsv1.StatefulSet{ObjectMeta: metaObj},
+		},
+		{
+			name:     "daemonset",
+			resource: testtriggersv1.TestTriggerResourceDaemonSet,
+			handler:  service.daemonSetEventHandler(ctx),
+			obj:      &appsv1.DaemonSet{ObjectMeta: metaObj},
+		},
+		{
+			name:     "service",
+			resource: testtriggersv1.TestTriggerResourceService,
+			handler:  service.serviceEventHandler(ctx),
+			obj:      &corev1.Service{ObjectMeta: metaObj},
+		},
+		{
+			name:     "ingress",
+			resource: testtriggersv1.TestTriggerResourceIngress,
+			handler:  service.ingressEventHandler(ctx),
+			obj:      &networkingv1.Ingress{ObjectMeta: metaObj},
+		},
+		{
+			name:     "configmap",
+			resource: testtriggersv1.TestTriggerResourceConfigMap,
+			handler:  service.configMapEventHandler(ctx),
+			obj:      &corev1.ConfigMap{ObjectMeta: metaObj},
+		},
+	}
+
+	var expected []string
+	for _, tc := range resourceCases {
+		triggerName := "delete-" + tc.name
+		service.addTrigger(ctx, &testtriggersv1.TestTrigger{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: triggerName},
+			Spec: testtriggersv1.TestTriggerSpec{
+				Resource: tc.resource,
+				Event:    "deleted",
+			},
+		})
+		expected = append(expected, fmt.Sprintf("%s:%s:deleted", triggerName, tc.resource))
+	}
+
+	for _, tc := range resourceCases {
+		tc.handler.DeleteFunc(cache.DeletedFinalStateUnknown{
+			Key: namespace + "/res-1",
+			Obj: tc.obj,
+		})
+	}
+	assert.Equal(t, expected, executed)
 }
