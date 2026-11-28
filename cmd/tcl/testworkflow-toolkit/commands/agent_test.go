@@ -115,6 +115,8 @@ func TestAgentStep_Run(t *testing.T) {
 		outputs map[string]testworkflowsv1.ParameterSchema
 		// toolOutputs is whether the control plane gives the AI Agent a tool for the outputs.
 		toolOutputs bool
+		// retry runs the step after an attempt that left its answer and its turn data.
+		retry bool
 
 		wantErr     string
 		wantLog     []string
@@ -151,6 +153,22 @@ func TestAgentStep_Run(t *testing.T) {
 			toolOutputs: true,
 			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-1", State: completed, SessionId: "session-1", Outputs: `{"verdict": "go"}`}},
 			wantOutputs: map[string]string{"verdict": "go"},
+		},
+		{
+			name:        "removes the answer of an earlier attempt when the retry ends on the tool with no text",
+			outputs:     map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
+			toolOutputs: true,
+			retry:       true,
+			start:       agentReply{turn: &cloud.AgentTurn{Id: "turn-2", State: completed, SessionId: "session-2", Outputs: `{"verdict": "go"}`}},
+			wantOutputs: map[string]string{"verdict": "go"},
+		},
+		{
+			name:        "removes the session of an earlier attempt when the retry cannot start a turn",
+			outputs:     map[string]testworkflowsv1.ParameterSchema{"verdict": verdictSchema},
+			retry:       true,
+			start:       agentReply{err: status.Error(codes.ResourceExhausted, "the execution started 20 turns")},
+			wantErr:     "cannot start the AI Agent",
+			wantOutputs: map[string]string{"verdict": "no-go"},
 		},
 		{
 			name:    "fails for an answer with no valid outputs, and writes the answer and the defaults",
@@ -286,6 +304,10 @@ func TestAgentStep_Run(t *testing.T) {
 			}
 			if tt.noStepID {
 				step.resultsDir = ""
+			}
+			if tt.retry {
+				require.NoError(t, writeStepFile(filepath.Join(step.resultsDir, agentResponseFile), "Go."))
+				require.NoError(t, writeStepFile(filepath.Join(step.resultsDir, data.StepAgentFile), `{"session":"session-1","name":"failure-triage"}`))
 			}
 
 			err := step.run(ctx, testworkflowsv1.StepAgent{Name: "failure-triage", Prompt: "Find the cause.", Outputs: tt.outputs})

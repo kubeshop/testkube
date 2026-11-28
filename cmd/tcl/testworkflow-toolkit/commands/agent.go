@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -147,6 +148,9 @@ func (s *agentStep) runTurn(ctx context.Context, spec testworkflowsv1.StepAgent)
 	// costs time and tokens, so the step starts no turn when it has no place for the answer.
 	if s.resultsDir == "" {
 		return &DefinitionError{Subject: agentSubject, Err: errors.New("the step has no results directory for the answer, because it has no id. Set an id on the step")}
+	}
+	if err := s.removeTurnFiles(); err != nil {
+		return err
 	}
 	schema, err := agentOutputsSchemaJSON(spec.Outputs)
 	if err != nil {
@@ -308,6 +312,18 @@ func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testwo
 		return fmt.Errorf("the answer of the AI Agent does not give the outputs of the step: %w", err)
 	}
 	return s.writeOutputs(values)
+}
+
+// removeTurnFiles removes the answer and the data of the turn of an earlier attempt. A retry of
+// the step uses the same results directory, and the init process clears only the step outputs.
+// Without this, a later step reads the answer or the session of the attempt that failed.
+func (s *agentStep) removeTurnFiles() error {
+	for _, name := range []string{agentResponseFile, data.StepAgentFile} {
+		if err := os.Remove(filepath.Join(s.resultsDir, name)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("cannot remove the %s file of an earlier attempt: %w", name, err)
+		}
+	}
+	return nil
 }
 
 // writeInfo writes the file that the init process reads for step.<id>.agent.<key>.

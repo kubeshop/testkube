@@ -43,6 +43,9 @@
 //     step output. The init process skips an output file above data.MaxOutputSize, and an
 //     answer has no size limit. A later step reads the path of the file at
 //     step.<id>.agent.responseFile, so the author sets the id or the name of the step.
+//   - A retry of the step uses the same results directory, and the init process clears only the
+//     step outputs. So the command removes response.md and agent.json before it starts a turn,
+//     and a later step never reads the answer or the session of an earlier attempt.
 //   - agent_outputs.go gives the outputs that the step declares under `outputs`. Each one has
 //     the schema of a config parameter. The command adds a contract to the prompt: the answer
 //     ends with a fenced block with the language testkube-outputs that holds one JSON object.
