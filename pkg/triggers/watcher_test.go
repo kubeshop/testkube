@@ -692,15 +692,82 @@ func TestService_eventHandlers_deleteTombstone(t *testing.T) {
 		t.Fatal("expected deleted webhook template event to be published")
 	}
 
-	// Verify resource handlers unwrap tombstones without panicking or dropping events.
+	// Verify resource handlers unwrap tombstones and trigger matching delete executions.
+	var executed []string
+	service.triggerExecutor = func(_ context.Context, e *watcherEvent, t *internalTrigger) error {
+		executed = append(executed, fmt.Sprintf("%s:%s:%s", t.Name, e.resource, e.eventType))
+		return nil
+	}
+
 	metaObj := metav1.ObjectMeta{Namespace: namespace, Name: "res-1"}
-	assert.NotPanics(t, func() {
-		service.podEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{Key: namespace + "/res-1", Obj: &corev1.Pod{ObjectMeta: metaObj}})
-		service.deploymentEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{Key: namespace + "/res-1", Obj: &appsv1.Deployment{ObjectMeta: metaObj}})
-		service.statefulSetEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{Key: namespace + "/res-1", Obj: &appsv1.StatefulSet{ObjectMeta: metaObj}})
-		service.daemonSetEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{Key: namespace + "/res-1", Obj: &appsv1.DaemonSet{ObjectMeta: metaObj}})
-		service.serviceEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{Key: namespace + "/res-1", Obj: &corev1.Service{ObjectMeta: metaObj}})
-		service.ingressEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{Key: namespace + "/res-1", Obj: &networkingv1.Ingress{ObjectMeta: metaObj}})
-		service.configMapEventHandler(ctx).DeleteFunc(cache.DeletedFinalStateUnknown{Key: namespace + "/res-1", Obj: &corev1.ConfigMap{ObjectMeta: metaObj}})
-	})
+	resourceCases := []struct {
+		name     string
+		resource testtriggersv1.TestTriggerResource
+		handler  cache.ResourceEventHandlerFuncs
+		obj      any
+	}{
+		{
+			name:     "pod",
+			resource: testtriggersv1.TestTriggerResourcePod,
+			handler:  service.podEventHandler(ctx),
+			obj:      &corev1.Pod{ObjectMeta: metaObj},
+		},
+		{
+			name:     "deployment",
+			resource: testtriggersv1.TestTriggerResourceDeployment,
+			handler:  service.deploymentEventHandler(ctx),
+			obj:      &appsv1.Deployment{ObjectMeta: metaObj},
+		},
+		{
+			name:     "statefulset",
+			resource: testtriggersv1.TestTriggerResourceStatefulSet,
+			handler:  service.statefulSetEventHandler(ctx),
+			obj:      &appsv1.StatefulSet{ObjectMeta: metaObj},
+		},
+		{
+			name:     "daemonset",
+			resource: testtriggersv1.TestTriggerResourceDaemonSet,
+			handler:  service.daemonSetEventHandler(ctx),
+			obj:      &appsv1.DaemonSet{ObjectMeta: metaObj},
+		},
+		{
+			name:     "service",
+			resource: testtriggersv1.TestTriggerResourceService,
+			handler:  service.serviceEventHandler(ctx),
+			obj:      &corev1.Service{ObjectMeta: metaObj},
+		},
+		{
+			name:     "ingress",
+			resource: testtriggersv1.TestTriggerResourceIngress,
+			handler:  service.ingressEventHandler(ctx),
+			obj:      &networkingv1.Ingress{ObjectMeta: metaObj},
+		},
+		{
+			name:     "configmap",
+			resource: testtriggersv1.TestTriggerResourceConfigMap,
+			handler:  service.configMapEventHandler(ctx),
+			obj:      &corev1.ConfigMap{ObjectMeta: metaObj},
+		},
+	}
+
+	var expected []string
+	for _, tc := range resourceCases {
+		triggerName := "delete-" + tc.name
+		service.addTrigger(ctx, &testtriggersv1.TestTrigger{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: triggerName},
+			Spec: testtriggersv1.TestTriggerSpec{
+				Resource: tc.resource,
+				Event:    "deleted",
+			},
+		})
+		expected = append(expected, fmt.Sprintf("%s:%s:deleted", triggerName, tc.resource))
+	}
+
+	for _, tc := range resourceCases {
+		tc.handler.DeleteFunc(cache.DeletedFinalStateUnknown{
+			Key: namespace + "/res-1",
+			Obj: tc.obj,
+		})
+	}
+	assert.Equal(t, expected, executed)
 }
