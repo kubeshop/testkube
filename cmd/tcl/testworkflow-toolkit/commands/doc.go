@@ -21,8 +21,15 @@
 //
 // agent.go runs the `agent` step: one turn of an AI Agent that runs in the control plane. The
 // command starts the turn, reads it until its end, prints its tool calls and text to the step
-// log, writes the answer to a file, and writes the step output `session`. It writes `session`
-// when the control plane first gives the session ID, so a failed turn has it too.
+// log, and writes the answer to a file. The log shows what the AI Agent returned, as it is: the
+// command adds one line for the start and one for each tool call, and no line for the answer
+// file or for the outputs. A later step reads those through expressions. The command also
+// writes the file agent.json in the results directory of the step, with the session and the
+// name of the AI Agent. The init process reads
+// it for step.<id>.agent.session and step.<id>.agent.name. The command writes it when the
+// control plane first gives the session ID, so a failed turn has it too. The session is not a
+// step output: the outputs of all steps make one set of names for the workflow, so the session
+// of a second agent step would replace the first.
 //
 //   - The processor gives the spec as base64 JSON, so the command resolves the expressions of
 //     the name and the prompt. It resolves them one time: an expression in the value of a step
@@ -34,12 +41,37 @@
 //     writes it. With that byte the text can start an instruction for the init process.
 //   - The answer is the file response.md in the results directory of the step, and it is not a
 //     step output. The init process skips an output file above data.MaxOutputSize, and an
-//     answer has no size limit. A later step reads the answer at step.<id>.results/response.md,
-//     so the author sets the id or the name of the step to know that path.
+//     answer has no size limit. A later step reads the path of the file at
+//     step.<id>.agent.responseFile, so the author sets the id or the name of the step.
+//   - A retry of the step uses the same results directory, and the init process clears only the
+//     step outputs. So the command removes response.md and agent.json before it starts a turn,
+//     and a later step never reads the answer or the session of an earlier attempt.
+//   - agent_outputs.go gives the outputs that the step declares under `outputs`. Each one has
+//     the schema of a config parameter. The command adds a contract to the prompt: the answer
+//     ends with a fenced block with the language testkube-outputs that holds one JSON object.
+//     The command reads the last block only when no text follows it, because an earlier block
+//     can be a quote from a tool. It checks each field against its schema, and writes each
+//     value as a step output, so a later step reads step.<id>.outputs.<name>. A value is text,
+//     a number or a boolean; a list and an object fail. A field that the answer does not have
+//     takes its default.
+//   - A control plane with the capability tw-agent-step-outputs gives the AI Agent a tool for the
+//     outputs. The command sends it the schemas, adds no contract to the prompt, and takes the
+//     fields that the turn returns. It checks them the same way, because it trusts no other check.
+//   - An answer with no valid outputs fails the step. Then, and when the turn fails or the
+//     control plane refuses it, the command writes the default of each output that has one. A
+//     condition on an output that does not exist aborts the execution, and with a default it
+//     reads a known value, such as "no-go". An output with no default has no value then.
+//     So a default is the value for "the AI Agent said nothing", and a later step acts on it.
+//     It must be the value that is safe to act on: "no-go" for a gate, "unknown" for a category.
+//     The command prints a warning with the defaults that it used, because in an expression a
+//     default looks the same as a value from the AI Agent.
+//   - The command fails before the first call for an output name that the init process does
+//     not read as a file, and for a default that its schema refuses. The processor refuses
+//     the same names when it processes the workflow.
 //   - The processor gives an ID to each step, so each agent step has a results directory. When
 //     the step has no results directory, the command fails before it starts a turn.
-//   - The ID goes to the first stage of a step only, and the init process collects the session
-//     output from the stage with the ID. So the processor refuses an agent step with an
+//   - The ID goes to the first stage of a step only, and the init process collects the outputs
+//     from the stage with the ID. So the processor refuses an agent step with an
 //     operation that makes an earlier stage, such as a delay.
 //   - The command makes one request ID for the process and sends it with the start call, so a
 //     retry of that call returns the same turn.

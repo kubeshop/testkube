@@ -10,9 +10,11 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/grpcutils"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/agentoutputs"
 )
 
 // agentSubject names the agent step in an error of its definition.
@@ -49,12 +52,10 @@ const (
 	agentPollFailureLimit = 10
 )
 
-const (
-	agentOutputSession = "session"
-	// agentResponseFile is the file in the step results directory that holds the answer. The
-	// answer is not a step output, because a step output has a size limit and an answer has none.
-	agentResponseFile = "response.md"
-)
+// agentResponseFile is the file in the step results directory that holds the answer. The
+// answer is not a step output, because a step output has a size limit and an answer has none.
+// A later step gets its path from step.<id>.agent.responseFile.
+const agentResponseFile = data.StepAgentResponseName
 
 // instructionStart is the first byte of an instruction for the init process and for the Runner.
 const instructionStart = "\x01"
@@ -110,22 +111,62 @@ type agentStep struct {
 	// resultsDir is the results directory of the step. It is empty when the step has no ID.
 	resultsDir   string
 	pollInterval time.Duration
+	// lastText is the last text of the AI Agent that the step printed.
+	lastText string
+	// toolOutputs is whether the control plane gives the AI Agent a tool for the declared
+	// outputs. Without it the prompt asks for them as a block in the answer.
+	toolOutputs bool
 }
 
-// run starts the turn and follows it to its end. It returns an error for each end that is not a
-// completed turn.
+// run runs the turn and gives the declared outputs a value. When the turn gives no valid
+// outputs, each output that has a default takes it, so a later condition reads a known value.
 func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) error {
+	err := s.runTurn(ctx, spec)
+	if err != nil {
+		defaults := agentOutputDefaults(spec.Outputs)
+		if writeErr := s.writeOutputs(defaults); writeErr != nil {
+			s.printf("warn: cannot write the default outputs: %s\n", writeErr.Error())
+		} else if len(defaults) > 0 {
+			// A default here is not a value from the AI Agent, and a later step acts on it. The
+			// log says so, because the value looks the same as a real one in an expression.
+			names := make([]string, 0, len(defaults))
+			for _, name := range agentoutputs.Names(spec.Outputs) {
+				if value, ok := defaults[name]; ok {
+					names = append(names, name+"="+value)
+				}
+			}
+			s.printf("warn: the AI Agent gave no valid outputs, so the step uses the defaults: %s\n", strings.Join(names, ", "))
+		}
+	}
+	return err
+}
+
+// runTurn starts the turn and follows it to its end. It returns an error for each end that is
+// not a completed turn with valid outputs.
+func (s *agentStep) runTurn(ctx context.Context, spec testworkflowsv1.StepAgent) error {
 	// The answer is a file in the results directory. The processor gives each step an ID. A turn
 	// costs time and tokens, so the step starts no turn when it has no place for the answer.
 	if s.resultsDir == "" {
 		return &DefinitionError{Subject: agentSubject, Err: errors.New("the step has no results directory for the answer, because it has no id. Set an id on the step")}
 	}
+	if err := s.removeTurnFiles(); err != nil {
+		return err
+	}
+	schema, err := agentOutputsSchemaJSON(spec.Outputs)
+	if err != nil {
+		return &DefinitionError{Subject: agentSubject, Err: err}
+	}
+	prompt := spec.Prompt
+	if !s.toolOutputs {
+		prompt += agentOutputsContract(spec.Outputs)
+	}
 	turn, err := s.call(ctx, func(ctx context.Context) (*cloud.AgentTurn, error) {
 		return s.client.StartAgentTurn(ctx, &cloud.StartAgentTurnRequest{
-			RequestId: s.requestID,
-			StepRef:   s.stepRef,
-			AgentName: spec.Name,
-			Prompt:    spec.Prompt,
+			RequestId:     s.requestID,
+			StepRef:       s.stepRef,
+			AgentName:     spec.Name,
+			Prompt:        prompt,
+			OutputsSchema: schema,
 		})
 	})
 	if err != nil {
@@ -134,20 +175,20 @@ func (s *agentStep) run(ctx context.Context, spec testworkflowsv1.StepAgent) err
 	turnID := turn.GetId()
 	s.printf("AI Agent %q started. Session: %s\n", spec.Name, plainText(turn.GetSessionId()))
 
-	sessionWritten := false
+	infoWritten := false
 	for {
 		s.printEvents(turn.GetEvents())
 		// A turn that fails later still has a session, and a person finds the cause there.
-		if session := plainText(turn.GetSessionId()); session != "" && !sessionWritten {
-			if err := writeStepFile(filepath.Join(s.outputsDir, agentOutputSession), session); err != nil {
-				return fmt.Errorf("cannot write the %q output: %w", agentOutputSession, err)
+		if session := plainText(turn.GetSessionId()); session != "" && !infoWritten {
+			if err := s.writeInfo(map[string]string{data.StepAgentSession: session, data.StepAgentName: spec.Name}); err != nil {
+				return err
 			}
-			sessionWritten = true
+			infoWritten = true
 		}
 
 		switch turn.GetState() {
 		case cloud.AgentTurnState_AGENT_TURN_STATE_COMPLETED:
-			return s.writeAnswer(turn)
+			return s.writeAnswer(turn, spec.Outputs)
 		case cloud.AgentTurnState_AGENT_TURN_STATE_FAILED:
 			return fmt.Errorf("the AI Agent failed: %s", plainText(turn.GetMessage()))
 		case cloud.AgentTurnState_AGENT_TURN_STATE_CANCELED:
@@ -228,19 +269,82 @@ func (s *agentStep) printEvents(events []*cloud.AgentTurnEvent) {
 			}
 			s.printf("%s\n", line)
 		default:
-			if text != "" {
-				s.printf("%s\n", text)
-			}
+			s.printText(text)
 		}
 	}
 }
 
-func (s *agentStep) writeAnswer(turn *cloud.AgentTurn) error {
-	path := filepath.Join(s.resultsDir, agentResponseFile)
-	if err := writeStepFile(path, plainText(turn.GetAnswer())); err != nil {
-		return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
+// printText prints a text of the AI Agent and keeps it, so the step does not print the answer
+// a second time.
+func (s *agentStep) printText(text string) {
+	if text = strings.TrimSpace(text); text != "" {
+		s.printf("%s\n", text)
+		s.lastText = text
 	}
-	s.printf("The answer is in %s\n", path)
+}
+
+// writeAnswer writes the file with the answer, and then the declared outputs. The file comes
+// first, so a person reads the answer also when its outputs are not valid.
+func (s *agentStep) writeAnswer(turn *cloud.AgentTurn, outputs map[string]testworkflowsv1.ParameterSchema) error {
+	answer := plainText(turn.GetAnswer())
+	trimmed := strings.TrimSpace(answer)
+	// A turn can end on the outputs tool with no text. It then has no answer file, so
+	// step.<id>.agent.responseFile has no value, and a later step does not read an empty file.
+	if trimmed != "" {
+		if err := writeStepFile(filepath.Join(s.resultsDir, agentResponseFile), answer); err != nil {
+			return fmt.Errorf("cannot write the answer of the AI Agent: %w", err)
+		}
+	}
+	// The log shows what the AI Agent returned. The answer is the last text of the turn, so the
+	// events print it, but a turn whose events the control plane cannot read has only the answer.
+	if trimmed != s.lastText {
+		s.printText(trimmed)
+	}
+	if len(outputs) == 0 {
+		return nil
+	}
+	fields, err := agentOutputFields(turn.GetOutputs(), answer)
+	var values map[string]string
+	if err == nil {
+		values, err = resolveAgentOutputs(outputs, fields)
+	}
+	if err != nil {
+		return fmt.Errorf("the answer of the AI Agent does not give the outputs of the step: %w", err)
+	}
+	return s.writeOutputs(values)
+}
+
+// removeTurnFiles removes the answer and the data of the turn of an earlier attempt. A retry of
+// the step uses the same results directory, and the init process clears only the step outputs.
+// Without this, a later step reads the answer or the session of the attempt that failed.
+func (s *agentStep) removeTurnFiles() error {
+	for _, name := range []string{agentResponseFile, data.StepAgentFile} {
+		if err := os.Remove(filepath.Join(s.resultsDir, name)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("cannot remove the %s file of an earlier attempt: %w", name, err)
+		}
+	}
+	return nil
+}
+
+// writeInfo writes the file that the init process reads for step.<id>.agent.<key>.
+func (s *agentStep) writeInfo(info map[string]string) error {
+	content, err := json.Marshal(info)
+	if err != nil {
+		return fmt.Errorf("cannot encode the data of the turn: %w", err)
+	}
+	if err := writeStepFile(filepath.Join(s.resultsDir, data.StepAgentFile), string(content)); err != nil {
+		return fmt.Errorf("cannot write the data of the turn: %w", err)
+	}
+	return nil
+}
+
+// writeOutputs writes one step output for each value.
+func (s *agentStep) writeOutputs(values map[string]string) error {
+	for name, value := range values {
+		if err := writeStepFile(filepath.Join(s.outputsDir, name), value); err != nil {
+			return fmt.Errorf("cannot write the %q output: %w", name, err)
+		}
+	}
 	return nil
 }
 
@@ -283,6 +387,10 @@ func NewAgentCmd() *cobra.Command {
 				toolkitcommon.Fail(err)
 			}
 
+			if err := checkAgentOutputSchemas(spec.Outputs); err != nil {
+				toolkitcommon.Fail(&DefinitionError{Subject: agentSubject, Err: err})
+			}
+
 			client, err := env.Cloud()
 			if err != nil {
 				toolkitcommon.Fail(fmt.Errorf("cannot reach the control plane: %w", err))
@@ -297,6 +405,7 @@ func NewAgentCmd() *cobra.Command {
 				stepRef:      config.Ref(),
 				outputsDir:   data.GetOutputsDir(),
 				pollInterval: agentPollInterval,
+				toolOutputs:  capabilities.Enabled(env.GetCapabilities(), capabilities.CapabilityAgentStepOutputs),
 			}
 			if resultsDir != nil {
 				step.resultsDir, _ = resultsDir.StringValue()

@@ -134,6 +134,83 @@ func TestStepMachine_Outputs(t *testing.T) {
 	}
 }
 
+func TestStepMachine_Agent(t *testing.T) {
+	tests := map[string]struct {
+		file    string // content of the file of the turn; empty means no file
+		answer  bool   // whether the step has a file with the answer
+		expr    string
+		wantVal string
+		wantOk  bool
+	}{
+		"resolves the session of the turn": {
+			file:    `{"session":"session-1","name":"Release Gate"}`,
+			expr:    "step.gate.agent.session",
+			wantVal: "session-1",
+			wantOk:  true,
+		},
+		"resolves the name of the AI Agent": {
+			file:    `{"session":"session-1","name":"Release Gate"}`,
+			expr:    "step.gate.agent.name",
+			wantVal: "Release Gate",
+			wantOk:  true,
+		},
+		"resolves the path of the file with the answer": {
+			file:    `{"session":"session-1"}`,
+			answer:  true,
+			expr:    "step.gate.agent.responseFile",
+			wantVal: "<results>/gate/response.md",
+			wantOk:  true,
+		},
+		"returns no path for a turn that gave no answer": {
+			file:   `{"session":"session-1"}`,
+			expr:   "step.gate.agent.responseFile",
+			wantOk: false,
+		},
+		"returns nothing for a key that the turn does not have": {
+			file:   `{"session":"session-1"}`,
+			expr:   "step.gate.agent.usage",
+			wantOk: false,
+		},
+		"returns nothing for a step that started no turn": {
+			expr:   "step.gate.agent.session",
+			wantOk: false,
+		},
+		"returns nothing for a file that is not JSON": {
+			file:   "session-1",
+			expr:   "step.gate.agent.session",
+			wantOk: false,
+		},
+		"returns nothing for a step that does not exist": {
+			file:   `{"session":"session-1"}`,
+			expr:   "step.other.agent.session",
+			wantOk: false,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupTestState(map[string]*StepData{"ref1": {Id: "gate"}}, "ref1")
+			base := GetStepResultsBase()
+			SetStepResultsBase(t.TempDir())
+			t.Cleanup(func() { SetStepResultsBase(base) })
+			if tc.file != "" {
+				for _, id := range []string{"gate", "other"} {
+					dir := StepResultsDir(id)
+					require.NoError(t, os.MkdirAll(dir, 0o755))
+					require.NoError(t, os.WriteFile(filepath.Join(dir, StepAgentFile), []byte(tc.file), 0o644))
+				}
+			}
+			if tc.answer {
+				require.NoError(t, os.WriteFile(filepath.Join(StepResultsDir("gate"), StepAgentResponseName), []byte("go"), 0o644))
+			}
+			val, ok := resolveStepExpr(t, tc.expr)
+			assert.Equal(t, tc.wantOk, ok)
+			if tc.wantOk {
+				assert.Equal(t, strings.ReplaceAll(tc.wantVal, "<results>", GetStepResultsBase()), val)
+			}
+		})
+	}
+}
+
 func TestStepMachine_StatusAndExitCode(t *testing.T) {
 	passed := constants.StepStatusPassed
 	failed := constants.StepStatusFailed

@@ -1,6 +1,8 @@
 package data
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +16,7 @@ const (
 	stepStatusKey     = "status"
 	stepExitCodeKey   = "exitCode"
 	stepOutputsPrefix = "outputs."
+	stepAgentPrefix   = "agent."
 )
 
 var (
@@ -84,6 +87,16 @@ var StepMachine = expressions.NewMachine().
 			}
 			return int64(step.ExitCode), true, nil
 
+		case strings.HasPrefix(rest, stepAgentPrefix):
+			if state.GetStepByID(stepId) == nil {
+				return nil, false, nil
+			}
+			value, ok := stepAgentValue(stepId, rest[len(stepAgentPrefix):])
+			if !ok {
+				return nil, false, nil
+			}
+			return value, true, nil
+
 		case strings.HasPrefix(rest, stepOutputsPrefix):
 			key := rest[len(stepOutputsPrefix):]
 			if key == "" {
@@ -94,3 +107,47 @@ var StepMachine = expressions.NewMachine().
 
 		return nil, false, nil
 	})
+
+const (
+	// StepAgentFile is the file in the results directory of an agent step that holds the data of
+	// its turn. The toolkit writes it, and step.<id>.agent.<key> reads it.
+	//
+	// The data is not a step output. The outputs of all steps make one set of names for the
+	// workflow, which a parent workflow reads, so a value that each agent step writes would take
+	// a name from the author and the last step would win.
+	StepAgentFile = "agent.json"
+	// StepAgentSession is the key of the session of the AI Agent that holds the turn.
+	StepAgentSession = "session"
+	// StepAgentName is the key of the name of the AI Agent.
+	StepAgentName = "name"
+	// StepAgentResponseFile is the key of the path of the file with the answer of the AI Agent.
+	// It is a path and not the text: the answer has no size limit, and its text can come from a
+	// tool, so a workflow must not put it in a shell line.
+	StepAgentResponseFile = "responseFile"
+	// StepAgentResponseName is the name of that file in the results directory of the step.
+	StepAgentResponseName = "response.md"
+)
+
+// stepAgentValue reads one value of the turn of an agent step. A step that is not an agent step,
+// or that started no turn, has no file, so the expression stays unresolved.
+func stepAgentValue(stepId, key string) (string, bool) {
+	if key == StepAgentResponseFile {
+		// The path comes from the directory and not from the file of the turn, so the two cannot
+		// disagree. A turn that gave no answer has no file, and then the path has no value.
+		path := filepath.Join(StepResultsDir(stepId), StepAgentResponseName)
+		if info, err := os.Stat(path); err != nil || info.IsDir() {
+			return "", false
+		}
+		return path, true
+	}
+	content, err := os.ReadFile(filepath.Join(StepResultsDir(stepId), StepAgentFile))
+	if err != nil {
+		return "", false
+	}
+	var values map[string]string
+	if err := json.Unmarshal(content, &values); err != nil {
+		return "", false
+	}
+	value, ok := values[key]
+	return value, ok
+}

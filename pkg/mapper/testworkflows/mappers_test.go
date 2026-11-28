@@ -597,6 +597,9 @@ func TestMapStepAgentRoundTrips(t *testing.T) {
 		Prompt:   "Find the cause in {{ execution.id }}.",
 		Model:    "{{ config.model }}",
 		Thinking: "high",
+		Outputs: map[string]testworkflowsv1.ParameterSchema{
+			"verdict": {Type: testworkflowsv1.ParameterTypeString, Enum: []string{"go", "no-go"}},
+		},
 	}
 	operations := testworkflowsv1.StepOperations{Agent: agent}
 

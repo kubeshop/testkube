@@ -29,6 +29,11 @@ const CapabilityDependencyCache Capability = "tw-cache"
 // `agent` step of a Test Workflow.
 const CapabilityAgentStep Capability = "tw-agent-step"
 
+// CapabilityAgentStepOutputs is whether the control plane gives the AI Agent of an `agent` step
+// a tool that takes the outputs that the step declares. Without it the step asks for the outputs
+// as a block in the answer.
+const CapabilityAgentStepOutputs Capability = "tw-agent-step-outputs"
+
 // CapabilitySourceOfTruth is whether the control plane is ready to act as source of truth.
 // When this capability is present, newer versions of the agent MUST migrate which entails
 // pushing data to the control plane and handing over control to let the control plane be the new source of truth.
